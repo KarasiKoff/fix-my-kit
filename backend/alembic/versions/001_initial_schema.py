@@ -18,10 +18,17 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create custom types
-    repair_status = postgresql.ENUM("not_in_repair", "in_repair", name="repair_status")
-    request_status = postgresql.ENUM("open", "in_progress", "closed", name="request_status")
-    user_role = postgresql.ENUM("user", "admin", "sysadmin", name="user_role")
+    # Типы создаём явно ниже; у колонок create_type=False — иначе при create_table
+    # SQLAlchemy повторно шлёт CREATE TYPE и ловим DuplicateObject.
+    repair_status = postgresql.ENUM(
+        "not_in_repair", "in_repair", name="repair_status", create_type=False
+    )
+    request_status = postgresql.ENUM(
+        "open", "in_progress", "closed", name="request_status", create_type=False
+    )
+    user_role = postgresql.ENUM(
+        "user", "admin", "sysadmin", name="user_role", create_type=False
+    )
 
     repair_status.create(op.get_bind(), checkfirst=True)
     request_status.create(op.get_bind(), checkfirst=True)
