@@ -120,7 +120,8 @@
 
 ## UML Диаграмы
 ### БД 
-<img width="578" height="1103" alt="image" src="https://github.com/user-attachments/assets/0eccd8e9-5050-4acd-9590-06e0571ba4db" />
+<img width="613" height="1119" alt="image" src="https://github.com/user-attachments/assets/91928e2b-615f-4fa7-8f18-7aa99d6de1e9" />
+
 
 ### Use Case
 <img width="858" height="1290" alt="image" src="https://github.com/user-attachments/assets/45750f56-bdf1-4ddd-a293-f80265ae0e04" />
