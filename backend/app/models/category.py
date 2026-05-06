@@ -10,6 +10,6 @@ class Category(Base):
     __tablename__ = "categories"
 
     id = Column(Uuid, primary_key=True, default=uuid4)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, unique=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP")

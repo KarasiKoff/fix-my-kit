@@ -1,4 +1,3 @@
-from enum import Enum
 from uuid import uuid4
 
 from sqlalchemy import Column, Enum as SQLEnum
@@ -7,12 +6,7 @@ from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
-
-
-class RequestStatus(str, Enum):
-    OPEN = "open"
-    IN_PROGRESS = "in_progress"
-    CLOSED = "closed"
+from app.models.enums import RequestStatus
 
 
 class RepairRequest(Base):
@@ -25,7 +19,7 @@ class RepairRequest(Base):
     taken_by_sysadmin_by_user_id = Column(Uuid, ForeignKey("users.id"), nullable=True)
     applicant_name = Column(String, nullable=True)
     description = Column(Text, nullable=False)
-    status = Column(SQLEnum(RequestStatus), nullable=False, default=RequestStatus.OPEN)
+    status = Column(SQLEnum(RequestStatus, name="request_status"), nullable=False, default=RequestStatus.OPEN)
     taken_by_sysadmin_at = Column(TIMESTAMP(timezone=True), nullable=True)
     resolution_note = Column(Text, nullable=True)
     closed_at = Column(TIMESTAMP(timezone=True), nullable=True)

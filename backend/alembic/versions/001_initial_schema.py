@@ -19,9 +19,9 @@ depends_on = None
 
 def upgrade() -> None:
     # Create custom types
-    repair_status = postgresql.ENUM("not_in_repair", "in_repair", name="repairostatus")
-    request_status = postgresql.ENUM("open", "in_progress", "closed", name="requeststatus")
-    user_role = postgresql.ENUM("user", "admin", "sysadmin", name="userrole")
+    repair_status = postgresql.ENUM("not_in_repair", "in_repair", name="repair_status")
+    request_status = postgresql.ENUM("open", "in_progress", "closed", name="request_status")
+    user_role = postgresql.ENUM("user", "admin", "sysadmin", name="user_role")
 
     repair_status.create(op.get_bind(), checkfirst=True)
     request_status.create(op.get_bind(), checkfirst=True)
@@ -31,7 +31,7 @@ def upgrade() -> None:
     op.create_table(
         "categories",
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
+        sa.Column("name", sa.String(), nullable=False, unique=True),
         sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
         sa.Column(
             "created_at",
@@ -77,8 +77,6 @@ def upgrade() -> None:
         sa.Column("serial_number", sa.String(), nullable=True),
         sa.Column("cabinet", sa.String(), nullable=True),
         sa.Column("responsible_id", sa.Uuid(), nullable=True),
-        sa.Column("author_id", sa.Uuid(), nullable=False),
-        sa.Column("taken_by", sa.Uuid(), nullable=True),
         sa.Column("repair_status", repair_status, server_default="not_in_repair", nullable=False),
         sa.Column(
             "created_at",
@@ -92,10 +90,8 @@ def upgrade() -> None:
             server_default=sa.text("CURRENT_TIMESTAMP"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["author_id"], ["users.id"]),
         sa.ForeignKeyConstraint(["category_id"], ["categories.id"]),
         sa.ForeignKeyConstraint(["responsible_id"], ["users.id"]),
-        sa.ForeignKeyConstraint(["taken_by"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("inventory_number"),
     )
@@ -166,6 +162,6 @@ def downgrade() -> None:
     op.drop_table("categories")
 
     # Drop custom types
-    op.execute("DROP TYPE IF EXISTS repairostatus CASCADE")
-    op.execute("DROP TYPE IF EXISTS requeststatus CASCADE")
-    op.execute("DROP TYPE IF EXISTS userrole CASCADE")
+    op.execute("DROP TYPE IF EXISTS repair_status CASCADE")
+    op.execute("DROP TYPE IF EXISTS request_status CASCADE")
+    op.execute("DROP TYPE IF EXISTS user_role CASCADE")

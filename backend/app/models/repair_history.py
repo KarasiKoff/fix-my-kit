@@ -1,4 +1,3 @@
-from enum import Enum
 from uuid import uuid4
 
 from sqlalchemy import Column, Enum as SQLEnum
@@ -7,11 +6,7 @@ from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
-
-
-class RepairStatus(str, Enum):
-    NOT_IN_REPAIR = "not_in_repair"
-    IN_REPAIR = "in_repair"
+from app.models.enums import RepairStatus
 
 
 class RepairHistory(Base):
@@ -20,8 +15,8 @@ class RepairHistory(Base):
     id = Column(Uuid, primary_key=True, default=uuid4)
     device_id = Column(Uuid, ForeignKey("devices.id"), nullable=False)
     repair_request_id = Column(Uuid, ForeignKey("repair_requests.id"), nullable=True)
-    old_status = Column(SQLEnum(RepairStatus), nullable=True)
-    new_status = Column(SQLEnum(RepairStatus), nullable=True)
+    old_status = Column(SQLEnum(RepairStatus, name="repair_status"), nullable=True)
+    new_status = Column(SQLEnum(RepairStatus, name="repair_status"), nullable=True)
     note = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP")
 
