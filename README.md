@@ -117,3 +117,11 @@
 ## Коротко
 
 Система помогает вести прозрачный учет техники, быстро получать данные через QR и централизованно обрабатывать ремонтные заявки через Яндекс Трекер.
+
+## UML Диаграмы
+### БД 
+<img width="530" height="1022" alt="image" src="https://github.com/user-attachments/assets/21b8b7e9-d5af-45b5-87b8-6fb6b15ec6a1" />
+
+### Use Case
+<img width="858" height="1290" alt="image" src="https://github.com/user-attachments/assets/45750f56-bdf1-4ddd-a293-f80265ae0e04" />
+
