@@ -29,6 +29,17 @@ docker compose up --build
 - `GET /health` — liveness.
 - `GET /health/ready` — проверка подключения к PostgreSQL (`SELECT 1`).
 
+## Локальный запуск через uv
+
+Из корня репозитория:
+
+```bash
+uv sync
+uv run uvicorn main:app --reload
+```
+
+Python entrypoint находится в корневом `main.py`, а `pyproject.toml` и `uv.lock` должны храниться в корне проекта.
+
 ## Alembic (каркас готов)
 
 В репозитории уже подготовлены:
@@ -43,6 +54,12 @@ docker compose up --build
 ```bash
 alembic -c backend/alembic.ini revision --autogenerate -m "init"
 alembic -c backend/alembic.ini upgrade head
+```
+
+Или через `uv`:
+
+```bash
+uv run alembic -c backend/alembic.ini upgrade head
 ```
 
 Из каталога `backend/`:

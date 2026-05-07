@@ -5,8 +5,8 @@ from sqlalchemy import String, Uuid
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
-from app.models.base import Base
-from app.models.enums import UserRole
+from backend.app.models.base import Base
+from backend.app.models.enums import UserRole
 
 
 class User(Base):

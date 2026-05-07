@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import RepairStatus
+from backend.app.models.enums import RepairStatus
 
 
 class RepairHistoryBase(BaseModel):

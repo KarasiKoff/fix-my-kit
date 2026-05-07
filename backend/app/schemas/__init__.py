@@ -1,9 +1,9 @@
-from app.schemas.category import Category, CategoryCreate, CategoryUpdate
-from app.schemas.device import Device, DeviceCreate, DeviceUpdate
-from app.schemas.health import HealthResponse
-from app.schemas.repair_history import RepairHistoryCreate, RepairHistoryResponse
-from app.schemas.repair_request import RepairRequestCreate, RepairRequestResponse, RepairRequestUpdate
-from app.schemas.user import UserCreate, UserLogin, UserResponse, UserUpdate
+from backend.app.schemas.category import Category, CategoryCreate, CategoryUpdate
+from backend.app.schemas.device import Device, DeviceCreate, DeviceUpdate
+from backend.app.schemas.health import HealthResponse
+from backend.app.schemas.repair_history import RepairHistoryCreate, RepairHistoryResponse
+from backend.app.schemas.repair_request import RepairRequestCreate, RepairRequestResponse, RepairRequestUpdate
+from backend.app.schemas.user import UserCreate, UserLogin, UserResponse, UserUpdate
 
 __all__ = [
     "HealthResponse",

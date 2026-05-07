@@ -3,9 +3,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.enums import RepairStatus
-from app.schemas.category import Category
-from app.schemas.user import UserResponse
+from backend.app.models.enums import RepairStatus
+from backend.app.schemas.category import Category
+from backend.app.schemas.user import UserResponse
 
 
 class DeviceBase(BaseModel):

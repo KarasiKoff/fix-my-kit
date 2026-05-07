@@ -6,8 +6,8 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import relationship
 
-from app.models.base import Base
-from app.models.enums import RepairStatus
+from backend.app.models.base import Base
+from backend.app.models.enums import RepairStatus
 
 
 class Device(Base):
