@@ -18,6 +18,9 @@ class ServerConfig(BaseSettings):
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")
     api_port: int = Field(default=8000, alias="API_PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    jwt_secret_key: str = Field(default="change_me_secret", alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
 
 class DbConfig(BaseSettings):
@@ -60,6 +63,18 @@ class Settings(BaseModel):
     @property
     def log_level(self) -> str:
         return self.server.log_level
+
+    @property
+    def jwt_secret_key(self) -> str:
+        return self.server.jwt_secret_key
+
+    @property
+    def jwt_algorithm(self) -> str:
+        return self.server.jwt_algorithm
+
+    @property
+    def access_token_expire_minutes(self) -> int:
+        return self.server.access_token_expire_minutes
 
     @property
     def database_url(self) -> str:
