@@ -1,15 +1,65 @@
 import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { RepairRequestForm } from '../components/RepairRequestForm';
+import { useAppData } from '../context/AppDataContext';
 
 export function NewRepairRequest() {
-    function handleSubmit(data: { name: string; description: string }) {
-        console.log('Создать заявку', data);
+    const [searchParams] = useSearchParams();
+    const preselectedDeviceId = searchParams.get('deviceId') ?? undefined;
+    const { devices, repairRequests, getDeviceById, createRepairRequest } = useAppData();
+
+    function handleSubmit(data: { deviceId: string; name: string; description: string; applicantType: 'public' | 'internal' }) {
+        createRepairRequest({
+            deviceId: data.deviceId,
+            requesterName: data.name,
+            description: data.description,
+            applicantType: data.applicantType,
+        });
     }
 
     return (
-        <main>
+        <main className="page">
             <h2>Новая заявка на ремонт</h2>
-            <RepairRequestForm onSubmit={handleSubmit} />
+            <section className="card">
+                <RepairRequestForm devices={devices} initialDeviceId={preselectedDeviceId} onSubmit={handleSubmit} />
+            </section>
+            <section className="card">
+                <h3>Созданные заявки</h3>
+                <div className="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Устройство</th>
+                                <th>Заявитель</th>
+                                <th>Тип</th>
+                                <th>Статус</th>
+                                <th>Tracker</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {repairRequests.map((request) => (
+                                <tr key={request.id}>
+                                    <td>{new Date(request.createdAt).toLocaleString('ru-RU')}</td>
+                                    <td>{getDeviceById(request.deviceId)?.inventoryNumber ?? request.deviceId}</td>
+                                    <td>{request.requesterName}</td>
+                                    <td>{request.applicantType}</td>
+                                    <td>{request.status}</td>
+                                    <td>
+                                        {request.ticketUrl ? (
+                                            <a href={request.ticketUrl} target="_blank" rel="noreferrer">
+                                                {request.ticketKey}
+                                            </a>
+                                        ) : (
+                                            'нет'
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     );
 }
