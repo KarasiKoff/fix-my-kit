@@ -8,7 +8,7 @@ from app.models.enums import UserRole
 
 class UserBase(BaseModel):
     login: str
-    role: UserRole = UserRole.USER
+    role: UserRole = UserRole.ADMIN
     full_name: str | None = None
     is_active: bool = True
 

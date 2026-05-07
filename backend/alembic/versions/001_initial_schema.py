@@ -27,7 +27,7 @@ def upgrade() -> None:
         "open", "in_progress", "closed", name="request_status", create_type=False
     )
     user_role = postgresql.ENUM(
-        "user", "admin", "sysadmin", name="user_role", create_type=False
+        "admin", "sysadmin", name="user_role", create_type=False
     )
 
     repair_status.create(op.get_bind(), checkfirst=True)
@@ -55,7 +55,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("login", sa.String(), nullable=False),
         sa.Column("password_hash", sa.String(), nullable=False),
-        sa.Column("role", user_role, server_default="user", nullable=False),
+        sa.Column("role", user_role, server_default="admin", nullable=False),
         sa.Column("full_name", sa.String(), nullable=True),
         sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
         sa.Column(

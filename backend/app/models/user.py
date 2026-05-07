@@ -14,7 +14,7 @@ class User(Base):
     id = Column(Uuid, primary_key=True, default=uuid4)
     login = Column(String, nullable=False, unique=True)
     password_hash = Column(String, nullable=False)
-    role = Column(SQLEnum(UserRole, name="user_role"), nullable=False, default=UserRole.USER)
+    role = Column(SQLEnum(UserRole, name="user_role"), nullable=False, default=UserRole.ADMIN)
     full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP")
