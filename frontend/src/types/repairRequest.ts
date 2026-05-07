@@ -4,6 +4,9 @@ export type RepairRequest = {
     requesterName: string;
     description: string;
     status: 'new' | 'in_progress' | 'closed';
+    takenBySysadmin: boolean;
+    createdAt: string;
     ticketId?: string;
+    ticketKey?: string;
     ticketUrl?: string;
 };
