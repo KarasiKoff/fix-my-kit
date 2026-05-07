@@ -20,6 +20,21 @@
 docker compose up --build
 ```
 
+## Локальный запуск через UV
+
+1. Установите `uv`: https://docs.astral.sh/uv/getting-started/installation/ или pip install uv
+2. Установите зависимости из директории `backend`:
+
+```bash
+uv sync
+```
+
+3. Запустите приложение:
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
 ## Проверка
 
 - `GET /health` — liveness.
@@ -37,11 +52,15 @@ docker compose up --build
 Из **корня репозитория** (рядом с `.env`):
 
 ```bash
-alembic -c backend/alembic.ini revision --autogenerate -m "init"
-alembic -c backend/alembic.ini upgrade head
+uv --directory backend run alembic -c alembic.ini revision --autogenerate -m "init"
+uv --directory backend run alembic -c alembic.ini upgrade head
 ```
 
-## Зависимости (текущий базовый набор)
+## Зависимости
+
+Зависимости backend описаны в `pyproject.toml` и устанавливаются через UV.
+
+Текущий базовый набор:
 
 - `fastapi`
 - `uvicorn[standard]`
