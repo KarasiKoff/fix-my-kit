@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from sqlalchemy import Column, Enum as SQLEnum
 from sqlalchemy import ForeignKey, String, Uuid
+from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import relationship
 
@@ -20,12 +21,12 @@ class Device(Base):
     cabinet = Column(String, nullable=True)
     responsible_id = Column(Uuid, ForeignKey("users.id"), nullable=True)
     repair_status = Column(SQLEnum(RepairStatus, name="repair_status"), nullable=False, default=RepairStatus.NOT_IN_REPAIR)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default="CURRENT_TIMESTAMP")
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default="CURRENT_TIMESTAMP",
-        onupdate="CURRENT_TIMESTAMP",
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # Relationships
