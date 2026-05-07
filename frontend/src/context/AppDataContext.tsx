@@ -7,7 +7,6 @@ type NewRequestPayload = {
     deviceId: string;
     requesterName: string;
     description: string;
-    applicantType: 'public' | 'internal';
 };
 
 type AppDataContextValue = {
@@ -34,7 +33,6 @@ const initialRequests: RepairRequest[] = [
         requesterName: 'Мария Кузнецова',
         description: 'Зажевывает бумагу и не печатает после перезапуска.',
         status: 'in_progress',
-        applicantType: 'internal',
         takenBySysadmin: true,
         createdAt: '2026-05-06T08:30:00.000Z',
         ticketId: '44102',
@@ -109,7 +107,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             requesterName: payload.requesterName,
             description: payload.description,
             status: 'new',
-            applicantType: payload.applicantType,
             takenBySysadmin: false,
             createdAt: new Date().toISOString(),
             ticketId: ticket.ticketId,

@@ -9,8 +9,7 @@ export function UsersManagement() {
                 <ul className="history-list">
                     <li>admin — управляет оборудованием и пользователями</li>
                     <li>sysadmin — берет заявки в работу и закрывает ремонт</li>
-                    <li>user — создает внутренние заявки</li>
-                    <li>guest — отправляет публичные заявки без авторизации</li>
+                    <li>guest — гостевая роль без внутренних прав управления</li>
                 </ul>
             </section>
         </main>

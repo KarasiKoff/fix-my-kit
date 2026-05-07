@@ -8,12 +8,11 @@ export function NewRepairRequest() {
     const preselectedDeviceId = searchParams.get('deviceId') ?? undefined;
     const { devices, repairRequests, getDeviceById, createRepairRequest } = useAppData();
 
-    function handleSubmit(data: { deviceId: string; name: string; description: string; applicantType: 'public' | 'internal' }) {
+    function handleSubmit(data: { deviceId: string; name: string; description: string }) {
         createRepairRequest({
             deviceId: data.deviceId,
             requesterName: data.name,
             description: data.description,
-            applicantType: data.applicantType,
         });
     }
 
@@ -32,7 +31,6 @@ export function NewRepairRequest() {
                                 <th>Дата</th>
                                 <th>Устройство</th>
                                 <th>Заявитель</th>
-                                <th>Тип</th>
                                 <th>Статус</th>
                                 <th>Tracker</th>
                             </tr>
@@ -43,7 +41,6 @@ export function NewRepairRequest() {
                                     <td>{new Date(request.createdAt).toLocaleString('ru-RU')}</td>
                                     <td>{getDeviceById(request.deviceId)?.inventoryNumber ?? request.deviceId}</td>
                                     <td>{request.requesterName}</td>
-                                    <td>{request.applicantType}</td>
                                     <td>{request.status}</td>
                                     <td>
                                         {request.ticketUrl ? (

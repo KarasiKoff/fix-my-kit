@@ -5,7 +5,6 @@ type FormData = {
     deviceId: string;
     name: string;
     description: string;
-    applicantType: 'public' | 'internal';
 };
 
 export function RepairRequestForm({
@@ -20,14 +19,13 @@ export function RepairRequestForm({
     const [deviceId, setDeviceId] = useState(initialDeviceId ?? devices[0]?.id ?? '');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [applicantType, setApplicantType] = useState<'public' | 'internal'>('public');
 
     return (
         <form
             className="request-form"
             onSubmit={(event) => {
                 event.preventDefault();
-                onSubmit({ deviceId, name, description, applicantType });
+                onSubmit({ deviceId, name, description });
                 setDescription('');
             }}
         >
@@ -44,13 +42,6 @@ export function RepairRequestForm({
             <label>
                 Фамилия и имя
                 <input value={name} onChange={(e) => setName(e.target.value)} />
-            </label>
-            <label>
-                Тип заявки
-                <select value={applicantType} onChange={(event) => setApplicantType(event.target.value as 'public' | 'internal')}>
-                    <option value="public">Публичная (без авторизации)</option>
-                    <option value="internal">Внутренняя (авторизованный)</option>
-                </select>
             </label>
             <label>
                 Описание
