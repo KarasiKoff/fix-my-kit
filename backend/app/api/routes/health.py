@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
-from app.schemas.health import HealthResponse
+from backend.app.api.deps import get_db
+from backend.app.schemas.health import HealthResponse
 
 router = APIRouter()
 

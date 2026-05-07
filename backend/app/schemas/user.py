@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import UserRole
+from backend.app.models.enums import UserRole
 
 
 class UserBase(BaseModel):

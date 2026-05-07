@@ -3,7 +3,7 @@ from uuid import uuid4
 from sqlalchemy import Boolean, Column, String, Uuid, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
-from app.models.base import Base
+from backend.app.models.base import Base
 
 
 class Category(Base):
