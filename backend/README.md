@@ -32,11 +32,13 @@ docker compose up --build
 - `alembic/env.py`
 - `alembic/versions/`
 
-Остаётся только создавать миграции:
+Остаётся только создавать миграции.
+
+Из **корня репозитория** (рядом с `.env`):
 
 ```bash
-alembic revision --autogenerate -m "init"
-alembic upgrade head
+alembic -c backend/alembic.ini revision --autogenerate -m "init"
+alembic -c backend/alembic.ini upgrade head
 ```
 
 ## Зависимости (текущий базовый набор)
