@@ -25,8 +25,9 @@ services:
   backend:
     <<: [*env]
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
+      target: backend
     container_name: fixmykit-backend
     restart: unless-stopped
     environment:
@@ -35,11 +36,26 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: >
-      sh -c "if [ -f alembic.ini ]; then alembic upgrade head; fi &&
-      uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info"
     ports:
       - "${API_PORT:-8000}:8000"
+
+  frontend:
+    <<: [*env]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+      args:
+        VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://backend:8000}
+    container_name: fixmykit-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://backend:8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
 
 volumes:
   postgres_data:
