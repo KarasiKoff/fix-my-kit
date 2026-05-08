@@ -16,6 +16,23 @@ class RepairRequestCreate(RepairRequestBase):
     author_user_id: UUID | None = None
 
 
+class PublicRepairRequestCreate(RepairRequestBase):
+    applicant_name: str
+
+
+class RepairRequestStatusUpdate(BaseModel):
+    status: RequestStatus
+    resolution_note: str | None = None
+
+
+class RepairRequestTake(BaseModel):
+    taken: bool
+
+
+class RepairRequestClose(BaseModel):
+    resolution_note: str | None = None
+
+
 class RepairRequestUpdate(BaseModel):
     description: str | None = None
     status: RequestStatus | None = None
@@ -41,3 +58,16 @@ class RepairRequestResponse(RepairRequestBase):
     last_sync_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class RepairRequestList(BaseModel):
+    items: list[RepairRequestResponse]
+    total: int
+
+
+class PublicRepairRequestResponse(BaseModel):
+    id: UUID
+    status: RequestStatus
+
+
+RepairRequestDetail = RepairRequestResponse

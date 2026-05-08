@@ -11,6 +11,8 @@ from backend.app.core.security import decode_access_token
 from backend.app.models.enums import UserRole
 from backend.app.models.user import User
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
@@ -18,9 +20,6 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 def get_current_user(
@@ -57,4 +56,15 @@ def require_roles(*allowed_roles: UserRole):
     return _dependency
 
 
-__all__ = ["get_db", "oauth2_scheme", "get_current_user", "require_roles"]
+require_admin_or_sysadmin = require_roles(UserRole.ADMIN, UserRole.SYSADMIN)
+get_current_admin = require_admin_or_sysadmin
+
+
+__all__ = [
+    "get_current_admin",
+    "get_current_user",
+    "get_db",
+    "oauth2_scheme",
+    "require_admin_or_sysadmin",
+    "require_roles",
+]
