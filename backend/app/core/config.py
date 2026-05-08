@@ -21,6 +21,8 @@ class ServerConfig(BaseSettings):
     jwt_secret_key: str = Field(default="change_me_secret", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    admin_login: str | None = Field(default=None, alias="ADMIN_LOGIN")
+    admin_password: str | None = Field(default=None, alias="ADMIN_PASSWORD")
 
 
 class DbConfig(BaseSettings):
@@ -75,6 +77,14 @@ class Settings(BaseModel):
     @property
     def access_token_expire_minutes(self) -> int:
         return self.server.access_token_expire_minutes
+
+    @property
+    def admin_login(self) -> str | None:
+        return self.server.admin_login
+
+    @property
+    def admin_password(self) -> str | None:
+        return self.server.admin_password
 
     @property
     def database_url(self) -> str:
