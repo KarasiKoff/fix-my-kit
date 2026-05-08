@@ -1,8 +1,14 @@
 from collections.abc import Generator
+from uuid import UUID
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import SessionLocal
+from backend.app.core.security import decode_access_token
+from backend.app.models.user import User
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -13,4 +19,43 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-__all__ = ["get_db"]
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> User:
+    try:
+        payload = decode_access_token(token)
+    except InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+    user = db.query(User).filter(User.id == user_uuid, User.is_active.is_(True)).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
+    return user
+
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in ["admin", "sysadmin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions"
+        )
+    return current_user
+
+
+__all__ = ["get_db", "get_current_user", "get_current_admin"]
