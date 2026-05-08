@@ -50,4 +50,7 @@ def require_admin_or_sysadmin(current_user: User = Depends(get_current_user)) ->
     return current_user
 
 
-__all__ = ["get_db", "get_current_user", "oauth2_scheme", "require_admin_or_sysadmin"]
+get_current_admin = require_admin_or_sysadmin
+
+
+__all__ = ["get_current_admin", "get_db", "get_current_user", "oauth2_scheme", "require_admin_or_sysadmin"]
