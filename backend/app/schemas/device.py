@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 from backend.app.models.enums import RepairStatus
 from backend.app.schemas.category import Category
+from backend.app.schemas.repair_history import RepairHistoryResponse
 from backend.app.schemas.user import UserResponse
 
 
@@ -23,6 +24,7 @@ class DeviceCreate(DeviceBase):
 
 
 class DeviceUpdate(BaseModel):
+    inventory_number: str | None = None
     name: str | None = None
     serial_number: str | None = None
     cabinet: str | None = None
@@ -39,3 +41,21 @@ class Device(DeviceBase):
     updated_at: datetime
     category: Category | None = None
     responsible: UserResponse | None = None
+
+
+class DeviceDetail(Device):
+    pass
+
+
+class DeviceListResponse(BaseModel):
+    items: list[Device]
+    total: int
+
+
+class DeviceQrResponse(BaseModel):
+    device_id: UUID
+    url: str
+
+
+class DeviceHistoryResponse(BaseModel):
+    items: list[RepairHistoryResponse]

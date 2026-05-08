@@ -1,18 +1,14 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jwt import InvalidTokenError
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_db
-from backend.app.core.security import create_access_token, decode_access_token, verify_password
+from backend.app.api.deps import get_current_user, get_db
+from backend.app.core.security import create_access_token, verify_password
 from backend.app.models.user import User
 from backend.app.schemas.auth import LoginRequest, Token
 from backend.app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 def authenticate_user(login: str, password: str, db: Session) -> Token:
@@ -43,19 +39,5 @@ def login_for_swagger(
 
 
 @router.get("/me", response_model=UserResponse)
-def me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> UserResponse:
-    try:
-        payload = decode_access_token(token)
-    except InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    try:
-        user_uuid = UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = db.query(User).filter(User.id == user_uuid, User.is_active.is_(True)).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    return UserResponse.model_validate(user)
+def me(current_user: User = Depends(get_current_user)) -> UserResponse:
+    return UserResponse.model_validate(current_user)
