@@ -1,39 +1,15 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_db
-from backend.app.api.routes.auth import oauth2_scheme
-from backend.app.core.security import decode_access_token
+from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.category import Category as CategoryModel
 from backend.app.models.enums import UserRole
 from backend.app.models.user import User
 from backend.app.schemas.category import Category, CategoryCreate, CategoryList, CategoryUpdate
 
 router = APIRouter(prefix="/api/categories", tags=["categories"])
-
-
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
-    try:
-        payload = decode_access_token(token)
-    except InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    try:
-        user_uuid = UUID(user_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    user = db.query(User).filter(User.id == user_uuid, User.is_active.is_(True)).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    return user
 
 
 def require_roles(allowed_roles: set[UserRole]):

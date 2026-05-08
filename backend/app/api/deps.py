@@ -56,8 +56,14 @@ def require_roles(*allowed_roles: UserRole):
     return _dependency
 
 
+def require_admin_only(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+    return current_user
+
+
 require_admin_or_sysadmin = require_roles(UserRole.ADMIN, UserRole.SYSADMIN)
-get_current_admin = require_admin_or_sysadmin
+get_current_admin = require_admin_only
 
 
 __all__ = [
@@ -65,6 +71,7 @@ __all__ = [
     "get_current_user",
     "get_db",
     "oauth2_scheme",
+    "require_admin_only",
     "require_admin_or_sysadmin",
     "require_roles",
 ]
