@@ -1,18 +1,17 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_db
+from backend.app.api.deps import get_db, oauth2_scheme
 from backend.app.core.security import create_access_token, decode_access_token, verify_password
 from backend.app.models.user import User
 from backend.app.schemas.auth import LoginRequest, Token
 from backend.app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 def authenticate_user(login: str, password: str, db: Session) -> Token:
