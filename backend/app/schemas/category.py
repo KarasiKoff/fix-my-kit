@@ -9,8 +9,8 @@ class CategoryBase(BaseModel):
     is_active: bool = True
 
 
-class CategoryCreate(CategoryBase):
-    pass
+class CategoryCreate(BaseModel):
+    name: str
 
 
 class CategoryUpdate(BaseModel):
@@ -23,3 +23,7 @@ class Category(CategoryBase):
 
     id: UUID
     created_at: datetime
+
+
+class CategoryList(BaseModel):
+    items: list[Category]
