@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Device } from '../types/device';
 
 type FormData = {
@@ -20,23 +20,41 @@ export function RepairRequestForm({
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
 
+    useEffect(() => {
+        if (devices.length === 0) {
+            setDeviceId('');
+            return;
+        }
+
+        if (!devices.some((device) => device.id === deviceId)) {
+            setDeviceId(devices[0].id);
+        }
+    }, [devices, deviceId]);
+
     return (
         <form
             className="request-form"
             onSubmit={(event) => {
                 event.preventDefault();
+                if (!deviceId) {
+                    return;
+                }
                 onSubmit({ deviceId, name, description });
                 setDescription('');
             }}
         >
             <label>
                 Устройство
-                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} required>
-                    {devices.map((device) => (
-                        <option key={device.id} value={device.id}>
-                            {device.inventoryNumber} - {device.name}
-                        </option>
-                    ))}
+                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} required disabled={devices.length === 0}>
+                    {devices.length === 0 ? (
+                        <option value="">Нет доступных устройств</option>
+                    ) : (
+                        devices.map((device) => (
+                            <option key={device.id} value={device.id}>
+                                {device.inventoryNumber} - {device.name}
+                            </option>
+                        ))
+                    )}
                 </select>
             </label>
             <label>
@@ -47,7 +65,9 @@ export function RepairRequestForm({
                 Описание
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required />
             </label>
-            <button type="submit">Отправить заявку</button>
+            <button type="submit" disabled={devices.length === 0}>
+                Отправить заявку
+            </button>
         </form>
     );
 }
