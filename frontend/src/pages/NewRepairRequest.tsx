@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { RepairRequestForm } from '../components/RepairRequestForm';
 import { useAppData } from '../context/AppDataContext';
@@ -6,7 +6,25 @@ import { useAppData } from '../context/AppDataContext';
 export function NewRepairRequest() {
     const [searchParams] = useSearchParams();
     const preselectedDeviceId = searchParams.get('deviceId') ?? undefined;
-    const { devices, repairRequests, getDeviceById, createRepairRequest } = useAppData();
+    const { devices, createRepairRequest } = useAppData();
+    const [selectedRoom, setSelectedRoom] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+
+    const rooms = useMemo(() => Array.from(new Set(devices.map((device) => device.room))).sort(), [devices]);
+    const categories = useMemo(
+        () => Array.from(new Set(devices.map((device) => device.category))).sort(),
+        [devices],
+    );
+
+    const filteredDevices = useMemo(
+        () =>
+            devices.filter((device) => {
+                const roomMatches = selectedRoom === '' || device.room === selectedRoom;
+                const categoryMatches = selectedCategory === '' || device.category === selectedCategory;
+                return roomMatches && categoryMatches;
+            }),
+        [devices, selectedRoom, selectedCategory],
+    );
 
     function handleSubmit(data: { deviceId: string; name: string; description: string }) {
         void createRepairRequest({
@@ -20,42 +38,31 @@ export function NewRepairRequest() {
         <main className="page">
             <h2>Новая заявка на ремонт</h2>
             <section className="card">
-                <RepairRequestForm devices={devices} initialDeviceId={preselectedDeviceId} onSubmit={handleSubmit} />
-            </section>
-            <section className="card">
-                <h3>Созданные заявки</h3>
-                <div className="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Дата</th>
-                                <th>Устройство</th>
-                                <th>Заявитель</th>
-                                <th>Статус</th>
-                                <th>Tracker</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {repairRequests.map((request) => (
-                                <tr key={request.id}>
-                                    <td>{new Date(request.createdAt).toLocaleString('ru-RU')}</td>
-                                    <td>{getDeviceById(request.deviceId)?.inventoryNumber ?? request.deviceId}</td>
-                                    <td>{request.requesterName}</td>
-                                    <td>{request.status}</td>
-                                    <td>
-                                        {request.ticketUrl ? (
-                                            <a href={request.ticketUrl} target="_blank" rel="noreferrer">
-                                                {request.ticketKey}
-                                            </a>
-                                        ) : (
-                                            'нет'
-                                        )}
-                                    </td>
-                                </tr>
+                <div className="grid grid-3">
+                    <label>
+                        Кабинет
+                        <select value={selectedRoom} onChange={(event) => setSelectedRoom(event.target.value)}>
+                            <option value="">Все кабинеты</option>
+                            {rooms.map((room) => (
+                                <option key={room} value={room}>
+                                    {room}
+                                </option>
                             ))}
-                        </tbody>
-                    </table>
+                        </select>
+                    </label>
+                    <label>
+                        Тип устройства
+                        <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
+                            <option value="">Все категории</option>
+                            {categories.map((category) => (
+                                <option key={category} value={category}>
+                                    {category}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
                 </div>
+                <RepairRequestForm devices={filteredDevices} initialDeviceId={preselectedDeviceId} onSubmit={handleSubmit} />
             </section>
         </main>
     );
