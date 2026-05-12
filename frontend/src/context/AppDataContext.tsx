@@ -1,4 +1,6 @@
-import React, { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { fetchDevices, updateDeviceStatus } from '../api/devices';
+import { createRepairRequest as createRepairRequestApi, fetchRepairRequests } from '../api/repairRequests';
 import { Device } from '../types/device';
 import { RepairRequest } from '../types/repairRequest';
 import { RepairHistoryEntry } from '../types/repairHistory';
@@ -13,79 +15,59 @@ type AppDataContextValue = {
     devices: Device[];
     repairRequests: RepairRequest[];
     repairHistory: RepairHistoryEntry[];
-    createRepairRequest: (payload: NewRequestPayload) => void;
-    setDeviceStatus: (deviceId: string, status: Device['status'], note?: string) => void;
+    isLoading: boolean;
+    error: string | null;
+    refresh: () => Promise<void>;
+    createRepairRequest: (payload: NewRequestPayload) => Promise<void>;
+    setDeviceStatus: (deviceId: string, status: Device['status'], note?: string) => Promise<void>;
     getDeviceById: (id: string) => Device | undefined;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
-const initialDevices: Device[] = [
-    { id: 'dev-1', inventoryNumber: 'INV-1001', name: 'Ноутбук Lenovo T14', category: 'Ноутбук', serialNumber: 'LNV-T14-2391', room: '305', responsible: 'Иван Петров', status: 'not_in_repair', takenBySysadmin: false },
-    { id: 'dev-2', inventoryNumber: 'INV-1002', name: 'Принтер HP LaserJet', category: 'Принтер', serialNumber: 'HP-LJ-7722', room: '214', responsible: 'Ольга Смирнова', status: 'in_repair', takenBySysadmin: true },
-    { id: 'dev-3', inventoryNumber: 'INV-1003', name: 'Монитор Dell 24', category: 'Монитор', serialNumber: 'DLL-24-1122', room: '407', responsible: 'Алексей Ким', status: 'not_in_repair', takenBySysadmin: false },
-];
-
-const initialRequests: RepairRequest[] = [
-    {
-        id: 'req-1',
-        deviceId: 'dev-2',
-        requesterName: 'Мария Кузнецова',
-        description: 'Зажевывает бумагу и не печатает после перезапуска.',
-        status: 'in_progress',
-        takenBySysadmin: true,
-        createdAt: '2026-05-06T08:30:00.000Z',
-        ticketId: '44102',
-        ticketKey: 'FMK-17',
-        ticketUrl: 'https://tracker.yandex.ru/FMK-17',
-    },
-];
-
-const initialHistory: RepairHistoryEntry[] = [
-    {
-        id: 'hist-1',
-        deviceId: 'dev-2',
-        repairRequestId: 'req-1',
-        oldStatus: 'not_in_repair',
-        newStatus: 'in_repair',
-        note: 'Принтер забрал системный администратор.',
-        createdAt: '2026-05-06T08:45:00.000Z',
-    },
-];
-
-function createYandexTicketMeta() {
-    const numeric = Math.floor(Math.random() * 9000) + 1000;
-    const key = `FMK-${numeric}`;
-    return {
-        ticketId: `${100000 + numeric}`,
-        ticketKey: key,
-        ticketUrl: `https://tracker.yandex.ru/${key}`,
-    };
-}
-
 export function AppDataProvider({ children }: { children: ReactNode }) {
-    const [devices, setDevices] = useState<Device[]>(initialDevices);
-    const [repairRequests, setRepairRequests] = useState<RepairRequest[]>(initialRequests);
-    const [repairHistory, setRepairHistory] = useState<RepairHistoryEntry[]>(initialHistory);
+    const [devices, setDevices] = useState<Device[]>([]);
+    const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
+    const [repairHistory, setRepairHistory] = useState<RepairHistoryEntry[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const refresh = async () => {
+        setError(null);
+        const [nextDevices, nextRequests] = await Promise.all([fetchDevices(), fetchRepairRequests()]);
+        setDevices(nextDevices);
+        setRepairRequests(nextRequests);
+    };
+
+    useEffect(() => {
+        let active = true;
+
+        refresh()
+            .catch((err) => {
+                if (active) {
+                    setError(err instanceof Error ? err.message : 'Не удалось загрузить данные');
+                }
+            })
+            .finally(() => {
+                if (active) {
+                    setIsLoading(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const getDeviceById = (id: string) => devices.find((item) => item.id === id);
 
-    const setDeviceStatus = (deviceId: string, status: Device['status'], note?: string) => {
+    const setDeviceStatus = async (deviceId: string, status: Device['status'], note?: string) => {
         const prev = getDeviceById(deviceId);
         if (!prev || prev.status === status) {
             return;
         }
-        setDevices((current) =>
-            current.map((item) =>
-                item.id === deviceId
-                    ? {
-                          ...item,
-                          status,
-                          takenBySysadmin: status === 'in_repair',
-                      }
-                    : item,
-            ),
-        );
+        const updated = await updateDeviceStatus(deviceId, status);
+        setDevices((current) => current.map((item) => (item.id === deviceId ? updated : item)));
         setRepairHistory((current) => [
             {
                 id: `hist-${Date.now()}`,
@@ -99,20 +81,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ]);
     };
 
-    const createRepairRequest = (payload: NewRequestPayload) => {
-        const ticket = createYandexTicketMeta();
-        const newRequest: RepairRequest = {
-            id: `req-${Date.now()}`,
-            deviceId: payload.deviceId,
-            requesterName: payload.requesterName,
-            description: payload.description,
-            status: 'new',
-            takenBySysadmin: false,
-            createdAt: new Date().toISOString(),
-            ticketId: ticket.ticketId,
-            ticketKey: ticket.ticketKey,
-            ticketUrl: ticket.ticketUrl,
-        };
+    const createRepairRequest = async (payload: NewRequestPayload) => {
+        const newRequest = await createRepairRequestApi(payload);
 
         setRepairRequests((current) => [newRequest, ...current]);
         setDevices((current) =>
@@ -133,7 +103,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                 repairRequestId: newRequest.id,
                 oldStatus: 'not_in_repair',
                 newStatus: 'in_repair',
-                note: `Создана заявка ${newRequest.ticketKey}.`,
+                note: `Создана заявка ${newRequest.ticketKey ?? newRequest.id}.`,
                 createdAt: new Date().toISOString(),
             },
             ...current,
@@ -145,11 +115,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             devices,
             repairRequests,
             repairHistory,
+            isLoading,
+            error,
+            refresh,
             createRepairRequest,
             setDeviceStatus,
             getDeviceById,
         }),
-        [devices, repairRequests, repairHistory],
+        [devices, repairRequests, repairHistory, isLoading, error],
     );
 
     return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

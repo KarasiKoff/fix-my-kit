@@ -1,5 +1,6 @@
 export type User = {
     id: string;
     name: string;
-    role: 'guest' | 'admin' | 'sysadmin';
+    login?: string;
+    role: 'admin' | 'sysadmin';
 };

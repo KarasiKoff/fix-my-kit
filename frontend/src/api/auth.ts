@@ -1,9 +1,8 @@
-// API functions for authentication
+import { apiRequest } from './client';
 
-export async function login(credentials: { username: string; password: string }) {
-    return fetch('/api/auth/login', {
+export async function login(credentials: { login: string; password: string }) {
+    return apiRequest<{ access_token: string; token_type: string }>('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
-    }).then((res) => res.json());
+    });
 }

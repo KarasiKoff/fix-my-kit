@@ -16,7 +16,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthContextValue['user']>(null);
 
     async function signIn(username: string, password: string) {
-        // TODO: реализовать login
         setUser({ id: '1', name: username });
     }
 

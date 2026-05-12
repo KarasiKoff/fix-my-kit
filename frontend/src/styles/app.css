@@ -177,3 +177,7 @@ td {
   display: flex;
   gap: 10px;
 }
+
+.error-text {
+  color: #b91c1c;
+}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
 
 export function DevicesList() {
-    const { devices } = useAppData();
+    const { devices, isLoading, error } = useAppData();
     const [filters, setFilters] = React.useState({
         inventoryNumber: '',
         category: '',
@@ -24,6 +24,8 @@ export function DevicesList() {
     return (
         <main className="page">
             <h2>Список устройств</h2>
+            {isLoading && <p>Загрузка...</p>}
+            {error && <p className="error-text">{error}</p>}
             <section className="card">
                 <h3>Поиск и фильтрация</h3>
                 <div className="grid grid-5">

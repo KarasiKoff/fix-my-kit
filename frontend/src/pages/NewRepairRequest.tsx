@@ -9,7 +9,7 @@ export function NewRepairRequest() {
     const { devices, repairRequests, getDeviceById, createRepairRequest } = useAppData();
 
     function handleSubmit(data: { deviceId: string; name: string; description: string }) {
-        createRepairRequest({
+        void createRepairRequest({
             deviceId: data.deviceId,
             requesterName: data.name,
             description: data.description,

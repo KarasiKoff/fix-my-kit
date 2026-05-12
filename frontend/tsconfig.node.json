@@ -3,6 +3,7 @@
         "composite": true,
         "module": "ESNext",
         "moduleResolution": "Bundler",
-        "allowSyntheticDefaultImports": true
+        "allowSyntheticDefaultImports": true,
+        "types": ["node"]
     }
 }
