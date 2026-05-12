@@ -10,13 +10,13 @@ import { QRScan } from '../pages/QRScan';
 import { useAuth } from '../hooks/useAuth';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
-    const { user, isLoading } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) {
         return <main className="page"><p>Загрузка...</p></main>;
     }
 
-    if (!user) {
+    if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
 
@@ -24,13 +24,13 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 }
 
 function RequireGuest({ children }: { children: JSX.Element }) {
-    const { user, isLoading } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) {
         return <main className="page"><p>Загрузка...</p></main>;
     }
 
-    if (user) {
+    if (isAuthenticated) {
         return <Navigate to="/devices" replace />;
     }
 
@@ -38,7 +38,7 @@ function RequireGuest({ children }: { children: JSX.Element }) {
 }
 
 export function AppRouter() {
-    const { user, signOut } = useAuth();
+    const { isAuthenticated, signOut } = useAuth();
 
     return (
         <BrowserRouter>
@@ -46,12 +46,12 @@ export function AppRouter() {
                 <header className="topbar">
                     <h1>Fix My Kit</h1>
                     <nav className="topbar-nav">
-                        {user && <NavLink to="/devices">Оборудование</NavLink>}
+                        {isAuthenticated && <NavLink to="/devices">Оборудование</NavLink>}
                         <NavLink to="/scan">QR</NavLink>
                         <NavLink to="/repair">Заявка</NavLink>
-                        {user && <NavLink to="/requests">Все заявки</NavLink>}
-                        {user && <NavLink to="/users">Пользователи</NavLink>}
-                        {user && (
+                        {isAuthenticated && <NavLink to="/requests">Все заявки</NavLink>}
+                        {isAuthenticated && <NavLink to="/users">Пользователи</NavLink>}
+                        {isAuthenticated && (
                             <button type="button" className="nav-button" onClick={signOut}>
                                 Выйти
                             </button>
@@ -61,7 +61,7 @@ export function AppRouter() {
                 <Routes>
                     <Route
                         path="/"
-                        element={user ? <Navigate to="/devices" replace /> : <Navigate to="/repair" replace />}
+                        element={isAuthenticated ? <Navigate to="/devices" replace /> : <Navigate to="/repair" replace />}
                     />
                     <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
                     <Route path="/devices" element={<RequireAuth><DevicesList /></RequireAuth>} />

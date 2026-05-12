@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 export function Login() {
-    const { user, signIn, signOut } = useContext(AuthContext);
-    const [username, setUsername] = useState('admin');
-    const [password, setPassword] = useState('password');
+    const { isAuthenticated, signIn } = useContext(AuthContext);
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
@@ -25,11 +25,8 @@ export function Login() {
         <main className="page">
             <h2>Вход</h2>
             <section className="card">
-                {user ? (
-                    <>
-                        <p>Вы вошли как: {user.name}</p>
-                        <button type="button" onClick={signOut}>Выйти</button>
-                    </>
+                {isAuthenticated ? (
+                    <p>Вы уже вошли в систему.</p>
                 ) : (
                     <form className="request-form" onSubmit={handleSubmit}>
                         {error ? <p className="error-text">{error}</p> : null}

@@ -1,9 +1,10 @@
 import React, { createContext, useEffect, useState, ReactNode } from 'react';
-import { login as loginApi, getCurrentUser, getStoredAuthToken, setStoredAuthToken, clearStoredAuthToken } from '../api/auth';
+import { clearStoredAuthToken, getCurrentUser, getStoredAuthToken, login as loginApi, setStoredAuthToken } from '../api/auth';
 import { User } from '../types/user';
 
 type AuthContextValue = {
     user: null | User;
+    isAuthenticated: boolean;
     signIn: (username: string, password: string) => Promise<void>;
     signOut: () => void;
     isLoading: boolean;
@@ -11,6 +12,7 @@ type AuthContextValue = {
 
 export const AuthContext = createContext<AuthContextValue>({
     user: null,
+    isAuthenticated: false,
     signIn: async () => { },
     signOut: () => { },
     isLoading: true,
@@ -18,6 +20,7 @@ export const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthContextValue['user']>(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => getStoredAuthToken() !== null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         getCurrentUser(token)
             .then((currentUser) => {
+                setIsAuthenticated(true);
                 setUser({
                     id: currentUser.id,
                     name: currentUser.full_name ?? currentUser.login,
@@ -37,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             })
             .catch(() => {
                 clearStoredAuthToken();
+                setIsAuthenticated(false);
                 setUser(null);
             })
             .finally(() => setIsLoading(false));
@@ -45,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function signIn(username: string, password: string) {
         const result = await loginApi({ login: username, password });
         setStoredAuthToken(result.access_token);
+        setIsAuthenticated(true);
         const currentUser = await getCurrentUser(result.access_token);
         setUser({
             id: currentUser.id,
@@ -55,11 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     function signOut() {
         clearStoredAuthToken();
+        setIsAuthenticated(false);
         setUser(null);
     }
 
     return (
-        <AuthContext.Provider value={{ user, signIn, signOut, isLoading }}>
+        <AuthContext.Provider value={{ user, isAuthenticated, signIn, signOut, isLoading }}>
             {children}
         </AuthContext.Provider>
     );

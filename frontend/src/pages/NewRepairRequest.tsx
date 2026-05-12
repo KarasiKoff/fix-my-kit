@@ -27,7 +27,7 @@ export function NewRepairRequest() {
     );
 
     function handleSubmit(data: { deviceId: string; name: string; description: string }) {
-        createRepairRequest({
+        void createRepairRequest({
             deviceId: data.deviceId,
             requesterName: data.name,
             description: data.description,

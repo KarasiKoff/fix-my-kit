@@ -1,4 +1,4 @@
-// API functions for authentication
+import { apiRequest } from './client';
 
 type LoginCredentials = {
     login: string;
@@ -10,7 +10,7 @@ type TokenResponse = {
     token_type: string;
 };
 
-type UserResponse = {
+export type UserResponse = {
     id: string;
     login: string;
     role: 'admin' | 'sysadmin';
@@ -20,36 +20,26 @@ type UserResponse = {
 const AUTH_TOKEN_KEY = 'fix-my-kit-auth-token';
 
 export async function login(credentials: LoginCredentials): Promise<TokenResponse> {
-    const response = await fetch('/api/auth/login', {
+    return apiRequest<TokenResponse>('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
     });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        throw new Error(error?.detail ?? 'Login failed');
-    }
-
-    return response.json();
 }
 
 export async function getCurrentUser(token: string): Promise<UserResponse> {
-    const response = await fetch('/api/auth/me', {
+    return apiRequest<UserResponse>('/api/auth/me', {
         headers: {
             Authorization: `Bearer ${token}`,
         },
     });
-
-    if (!response.ok) {
-        throw new Error('Unable to load user');
-    }
-
-    return response.json();
 }
 
 export function getStoredAuthToken(): string | null {
     return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function hasStoredAuthToken(): boolean {
+    return getStoredAuthToken() !== null;
 }
 
 export function setStoredAuthToken(token: string) {
