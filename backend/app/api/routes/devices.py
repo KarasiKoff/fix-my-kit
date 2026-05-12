@@ -10,8 +10,7 @@ from backend.app.models.enums import RepairStatus, UserRole
 from backend.app.models.repair_history import RepairHistory
 from backend.app.schemas.device import Device, DeviceCreate, DeviceDetail, DeviceHistoryResponse, DeviceListResponse, DeviceQrResponse, DeviceUpdate
 
-router = APIRouter(prefix="/devices", tags=["devices"])
-
+router = APIRouter(prefix="/api/devices", tags=["devices"])
 
 def _device_base_query(db: Session):
     return db.query(DeviceModel).options(

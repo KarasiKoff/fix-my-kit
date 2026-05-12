@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from backend.app.api.deps import get_db, require_admin_or_sysadmin
 from backend.app.models.device import Device
@@ -21,8 +21,10 @@ from backend.app.schemas.repair_request import (
     RepairRequestStatusUpdate,
     RepairRequestTake,
 )
+from backend.app.schemas.tracker import TrackerSyncResponse
+from backend.app.services.tracker_service import TrackerUnavailableError, sync_repair_request_to_tracker
 
-router = APIRouter(tags=["repair-requests"])
+router = APIRouter(prefix="/api", tags=["repair-requests"])
 
 ACTIVE_STATUSES = (RequestStatus.OPEN, RequestStatus.IN_PROGRESS)
 ALLOWED_STATUS_TRANSITIONS = {
@@ -32,8 +34,11 @@ ALLOWED_STATUS_TRANSITIONS = {
 }
 
 
-def get_repair_request_or_404(db: Session, request_id: UUID) -> RepairRequest:
-    repair_request = db.query(RepairRequest).filter(RepairRequest.id == request_id).first()
+def get_repair_request_or_404(db: Session, request_id: UUID, *, for_tracker: bool = False) -> RepairRequest:
+    q = db.query(RepairRequest).filter(RepairRequest.id == request_id)
+    if for_tracker:
+        q = q.options(joinedload(RepairRequest.device), joinedload(RepairRequest.author))
+    repair_request = q.first()
     if repair_request is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="repair_request_not_found")
     return repair_request
@@ -199,3 +204,33 @@ def close_repair_request(
     db.commit()
     db.refresh(repair_request)
     return RepairRequestDetail.model_validate(repair_request)
+
+
+@router.post("/repair-requests/{request_id}/tracker/sync", response_model=TrackerSyncResponse)
+def sync_repair_request_tracker(
+    request_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_or_sysadmin),
+) -> TrackerSyncResponse:
+    repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
+    try:
+        result = sync_repair_request_to_tracker(repair_request)
+    except TrackerUnavailableError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="tracker_unavailable",
+        ) from None
+
+    repair_request.tracker_ticket_id = result.ticket_id
+    repair_request.tracker_ticket_key = result.ticket_key
+    repair_request.tracker_ticket_url = result.ticket_url
+    repair_request.last_sync_at = result.synced_at
+    db.commit()
+    db.refresh(repair_request)
+
+    return TrackerSyncResponse(
+        tracker_ticket_id=result.ticket_id,
+        tracker_ticket_key=result.ticket_key,
+        tracker_ticket_url=result.ticket_url,
+        last_sync_at=result.synced_at,
+    )
