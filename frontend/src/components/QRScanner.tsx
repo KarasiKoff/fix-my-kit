@@ -1,20 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export function QRScanner({ onScan }: { onScan: (value: string) => void }) {
     const [manualValue, setManualValue] = useState('');
     const [scanStatus, setScanStatus] = useState('Ожидание запуска камеры');
+    const scannerRef = useRef<Html5Qrcode | null>(null);
 
     useEffect(() => {
         const scanner = new Html5Qrcode('scanner-root');
-        let active = true;
+        scannerRef.current = scanner;
+        let mounted = true;
 
         scanner
             .start(
                 { facingMode: 'environment' },
                 { fps: 10, qrbox: { width: 240, height: 240 } },
                 (decodedText) => {
-                    if (!active) {
+                    if (!mounted) {
                         return;
                     }
                     setScanStatus(`Считано: ${decodedText}`);
@@ -23,18 +25,34 @@ export function QRScanner({ onScan }: { onScan: (value: string) => void }) {
                 () => undefined,
             )
             .then(() => {
+                if (!mounted) {
+                    return;
+                }
                 setScanStatus('Камера активна');
             })
-            .catch(() => {
+            .catch((error) => {
+                console.error('QRScanner start failed:', error);
+                if (!mounted) {
+                    return;
+                }
                 setScanStatus('Камера недоступна, используйте ручной ввод ниже');
             });
 
         return () => {
-            active = false;
-            scanner
-                .stop()
-                .then(() => scanner.clear())
-                .catch(() => scanner.clear());
+            mounted = false;
+            const currentScanner = scannerRef.current;
+            if (!currentScanner) {
+                return;
+            }
+
+            if (currentScanner.isScanning) {
+                currentScanner
+                    .stop()
+                    .then(() => currentScanner.clear())
+                    .catch(() => currentScanner.clear());
+            } else {
+                currentScanner.clear();
+            }
         };
     }, [onScan]);
 

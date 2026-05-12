@@ -8,6 +8,7 @@ import { RepairRequests } from '../pages/RepairRequests';
 import { UsersManagement } from '../pages/UsersManagement';
 import { QRScan } from '../pages/QRScan';
 import { useAuth } from '../hooks/useAuth';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
     const { isAuthenticated, isLoading } = useAuth();
@@ -69,7 +70,7 @@ export function AppRouter() {
                     <Route path="/repair" element={<NewRepairRequest />} />
                     <Route path="/requests" element={<RequireAuth><RepairRequests /></RequireAuth>} />
                     <Route path="/users" element={<RequireAuth><UsersManagement /></RequireAuth>} />
-                    <Route path="/scan" element={<QRScan />} />
+                    <Route path="/scan" element={<ErrorBoundary><QRScan /></ErrorBoundary>} />
                 </Routes>
             </div>
         </BrowserRouter>
