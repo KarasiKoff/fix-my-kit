@@ -38,6 +38,10 @@ export function getStoredAuthToken(): string | null {
     return localStorage.getItem(AUTH_TOKEN_KEY);
 }
 
+export function hasStoredAuthToken(): boolean {
+    return getStoredAuthToken() !== null;
+}
+
 export function setStoredAuthToken(token: string) {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
 }

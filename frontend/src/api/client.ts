@@ -1,3 +1,5 @@
+import { clearStoredAuthToken, getStoredAuthToken } from './auth';
+
 export class ApiError extends Error {
     status: number;
     detail: unknown;
@@ -17,6 +19,13 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
         headers.set('Content-Type', 'application/json');
     }
 
+    if (!headers.has('Authorization')) {
+        const token = getStoredAuthToken();
+        if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+        }
+    }
+
     const response = await fetch(path, {
         ...init,
         method,
@@ -31,6 +40,9 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     const payload = contentType.includes('application/json') ? await response.json() : await response.text();
 
     if (!response.ok) {
+        if (response.status === 401) {
+            clearStoredAuthToken();
+        }
         throw new ApiError(response.status, typeof payload === 'object' && payload !== null && 'detail' in payload ? payload.detail : payload);
     }
 
