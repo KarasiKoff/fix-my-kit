@@ -6,6 +6,7 @@ import { DeviceDetail } from '../pages/DeviceDetail';
 import { NewRepairRequest } from '../pages/NewRepairRequest';
 import { UsersManagement } from '../pages/UsersManagement';
 import { QRScan } from '../pages/QRScan';
+import { AdminAddDevice } from '../pages/AdminAddDevice';
 
 export function AppRouter() {
     return (
@@ -17,7 +18,6 @@ export function AppRouter() {
                         <NavLink to="/devices">Оборудование</NavLink>
                         <NavLink to="/scan">QR</NavLink>
                         <NavLink to="/repair">Заявки</NavLink>
-                        <NavLink to="/users">Пользователи</NavLink>
                     </nav>
                 </header>
                 <Routes>
@@ -26,7 +26,9 @@ export function AppRouter() {
                     <Route path="/devices" element={<DevicesList />} />
                     <Route path="/devices/:id" element={<DeviceDetail />} />
                     <Route path="/repair" element={<NewRepairRequest />} />
-                    <Route path="/users" element={<UsersManagement />} />
+                    <Route path="/users" element={<Navigate to="/admin" replace />} />
+                    <Route path="/admin" element={<UsersManagement />} />
+                    <Route path="/admin/devices/new" element={<AdminAddDevice />} />
                     <Route path="/scan" element={<QRScan />} />
                 </Routes>
             </div>

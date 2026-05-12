@@ -2,6 +2,7 @@ import React, { createContext, ReactNode, useContext, useMemo, useState } from '
 import { Device } from '../types/device';
 import { RepairRequest } from '../types/repairRequest';
 import { RepairHistoryEntry } from '../types/repairHistory';
+import { User } from '../types/user';
 
 type NewRequestPayload = {
     deviceId: string;
@@ -11,10 +12,19 @@ type NewRequestPayload = {
 
 type AppDataContextValue = {
     devices: Device[];
+    users: User[];
+    categories: string[];
+    cabinets: string[];
     repairRequests: RepairRequest[];
     repairHistory: RepairHistoryEntry[];
     createRepairRequest: (payload: NewRequestPayload) => void;
     setDeviceStatus: (deviceId: string, status: Device['status'], note?: string) => void;
+    addDevice: (payload: Omit<Device, 'id' | 'takenBySysadmin'>) => void;
+    createUser: (payload: Omit<User, 'id'>) => void;
+    updateUser: (userId: string, payload: Partial<Omit<User, 'id'>>) => void;
+    removeUser: (userId: string) => void;
+    addCategory: (name: string) => void;
+    addCabinet: (name: string) => void;
     getDeviceById: (id: string) => Device | undefined;
 };
 
@@ -53,6 +63,28 @@ const initialHistory: RepairHistoryEntry[] = [
     },
 ];
 
+const initialUsers: User[] = [
+    {
+        id: 'user-1',
+        login: 'admin',
+        fullName: 'Администратор системы',
+        email: 'admin@fixmykit.local',
+        role: 'admin',
+        isActive: true,
+    },
+    {
+        id: 'user-2',
+        login: 'sysadmin',
+        fullName: 'Дежурный системный администратор',
+        email: 'sysadmin@fixmykit.local',
+        role: 'sysadmin',
+        isActive: true,
+    },
+];
+
+const initialCategories = ['Ноутбук', 'Принтер', 'Монитор'];
+const initialCabinets = ['214', '305', '407'];
+
 function createYandexTicketMeta() {
     const numeric = Math.floor(Math.random() * 9000) + 1000;
     const key = `FMK-${numeric}`;
@@ -65,6 +97,9 @@ function createYandexTicketMeta() {
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
     const [devices, setDevices] = useState<Device[]>(initialDevices);
+    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [categories, setCategories] = useState<string[]>(initialCategories);
+    const [cabinets, setCabinets] = useState<string[]>(initialCabinets);
     const [repairRequests, setRepairRequests] = useState<RepairRequest[]>(initialRequests);
     const [repairHistory, setRepairHistory] = useState<RepairHistoryEntry[]>(initialHistory);
 
@@ -140,16 +175,64 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ]);
     };
 
+    const addDevice = (payload: Omit<Device, 'id' | 'takenBySysadmin'>) => {
+        setDevices((current) => [
+            {
+                ...payload,
+                id: `dev-${Date.now()}`,
+                takenBySysadmin: payload.status === 'in_repair',
+            },
+            ...current,
+        ]);
+    };
+
+    const createUser = (payload: Omit<User, 'id'>) => {
+        setUsers((current) => [{ ...payload, id: `user-${Date.now()}` }, ...current]);
+    };
+
+    const updateUser = (userId: string, payload: Partial<Omit<User, 'id'>>) => {
+        setUsers((current) => current.map((user) => (user.id === userId ? { ...user, ...payload } : user)));
+    };
+
+    const removeUser = (userId: string) => {
+        setUsers((current) => current.filter((user) => user.id !== userId));
+    };
+
+    const addCategory = (name: string) => {
+        const normalized = name.trim();
+        if (!normalized) {
+            return;
+        }
+        setCategories((current) => (current.includes(normalized) ? current : [...current, normalized]));
+    };
+
+    const addCabinet = (name: string) => {
+        const normalized = name.trim();
+        if (!normalized) {
+            return;
+        }
+        setCabinets((current) => (current.includes(normalized) ? current : [...current, normalized]));
+    };
+
     const value = useMemo(
         () => ({
             devices,
+            users,
+            categories,
+            cabinets,
             repairRequests,
             repairHistory,
             createRepairRequest,
             setDeviceStatus,
+            addDevice,
+            createUser,
+            updateUser,
+            removeUser,
+            addCategory,
+            addCabinet,
             getDeviceById,
         }),
-        [devices, repairRequests, repairHistory],
+        [devices, users, categories, cabinets, repairRequests, repairHistory],
     );
 
     return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

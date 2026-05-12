@@ -58,6 +58,7 @@ a {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  overflow: visible;
 }
 
 .grid {
@@ -176,4 +177,376 @@ td {
 .manual-qr-form {
   display: flex;
   gap: 10px;
+}
+
+.text-danger {
+  color: #b91c1c;
+  margin: 0;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 8px;
+  min-width: 340px;
+}
+
+.inline-actions button,
+.inline-actions select {
+  width: auto;
+}
+
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.role-admin {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.role-sysadmin {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.role-guest {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.inline-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-code {
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.btn-inline {
+  width: auto !important;
+  flex-shrink: 0;
+  padding: 8px 14px !important;
+  font-size: 14px;
+}
+
+.card-heading-compact {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.form-add-user {
+  max-width: none;
+  gap: 0;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  align-items: end;
+  max-width: 640px;
+}
+
+@media (max-width: 560px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-span-2 {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.btn-primary-inline {
+  width: auto !important;
+  min-width: 140px;
+  padding: 10px 18px !important;
+}
+
+.role-select {
+  min-width: 160px;
+}
+
+/* --- Admin panel layout --- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.page-admin .page-title-admin {
+  margin: 0;
+  font-size: 22px;
+}
+
+.admin-toolbar-card {
+  padding: 12px 14px;
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-toolbar-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-toolbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.admin-toolbar-url {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.admin-toolbar-url-label {
+  margin-right: 4px;
+}
+
+.admin-toolbar-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-link-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+  font-size: 14px;
+  color: #1d4ed8;
+  background: #fff;
+  width: auto;
+}
+
+.admin-link-btn:hover {
+  background: #eff6ff;
+}
+
+.btn-logout {
+  background: #fff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+}
+
+.btn-logout:hover {
+  background: #eff6ff !important;
+}
+
+.dict-card .card-section-title {
+  margin: 0 0 14px;
+  font-size: 17px;
+}
+
+.dict-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+
+@media (max-width: 720px) {
+  .dict-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dict-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.dict-inline-form .dict-inline-label {
+  flex: 1;
+  min-width: 160px;
+  margin: 0;
+}
+
+.dict-inline-form input {
+  width: 100%;
+}
+
+.dict-inline-form .btn-compact-primary {
+  flex-shrink: 0;
+}
+
+.btn-compact-primary {
+  width: auto !important;
+  padding: 9px 16px !important;
+  font-size: 14px;
+}
+
+.dict-subheading {
+  margin: 10px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.dict-chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dict-chip-list li {
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.users-panel-card {
+  padding: 14px 16px 16px;
+}
+
+.users-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.users-panel-title {
+  margin: 0;
+  font-size: 17px;
+}
+
+.users-panel-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 240px;
+}
+
+.filter-search {
+  flex: 1 1 220px;
+  max-width: 360px;
+  min-width: 180px;
+}
+
+.filter-role {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.users-table-wrap {
+  overflow-x: auto;
+}
+
+.table-users .th-actions,
+.table-users .td-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.action-toolbar {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-action {
+  width: auto !important;
+  min-width: 118px;
+  padding: 8px 12px !important;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn-action-danger {
+  background: #fff !important;
+  color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+}
+
+.btn-action-danger:hover {
+  background: #fef2f2 !important;
+}
+
+.role-select-compact {
+  width: 132px !important;
+  min-width: 132px;
+  padding: 8px 10px !important;
+  font-size: 13px;
+}
+
+.form-card-wide {
+  overflow: visible;
+}
+
+.form-grid-fluid {
+  max-width: none !important;
+  width: 100%;
+  align-items: start;
+  row-gap: 18px;
+  column-gap: 20px;
+}
+
+.form-grid-fluid .form-field-role select {
+  margin-bottom: 4px;
+}
+
+.form-grid-fluid .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  align-self: end;
+  padding-bottom: 2px;
 }
