@@ -109,13 +109,13 @@ def _requester_line(repair_request: RepairRequest) -> str:
 def _build_issue_payload(repair_request: RepairRequest, queue: str) -> dict:
     device = repair_request.device
     device_name = device.name if device is not None else "устройство (нет данных)"
-    cabinet = device.cabinet if device is not None else None
+    audience_name = device.audience.name if device is not None and device.audience is not None else None
     inv = device.inventory_number if device is not None else None
-    cabinet_display = cabinet.strip() if cabinet and str(cabinet).strip() else "—"
+    audience_display = audience_name.strip() if audience_name and str(audience_name).strip() else "—"
     inv_display = inv if inv else "—"
 
-    cabinet_part = f", каб. {cabinet}" if cabinet and str(cabinet).strip() else ""
-    summary = f"Ремонт: {device_name}{cabinet_part}"
+    audience_part = f", аудитория {audience_name}" if audience_name and str(audience_name).strip() else ""
+    summary = f"Ремонт: {device_name}{audience_part}"
     summary = summary[:255]
 
     requester = _requester_line(repair_request)
@@ -127,7 +127,7 @@ def _build_issue_payload(repair_request: RepairRequest, queue: str) -> dict:
     lines: list[str] = [
         "### Устройство",
         f"- **Название:** {device_name}",
-        f"- **Кабинет:** {cabinet_display}",
+        f"- **Аудитория:** {audience_display}",
         f"- **Инв. номер:** {inv_display}",
         "",
         "### Заявитель",

@@ -15,6 +15,7 @@ router = APIRouter(prefix="/api/devices", tags=["devices"])
 def _device_base_query(db: Session):
     return db.query(DeviceModel).options(
         joinedload(DeviceModel.category),
+        joinedload(DeviceModel.audience),
         joinedload(DeviceModel.responsible),
     )
 
@@ -27,7 +28,7 @@ def _device_base_query(db: Session):
 def list_devices(
     inventory_number: str | None = Query(default=None),
     category_id: UUID | None = Query(default=None),
-    cabinet: str | None = Query(default=None),
+    audience_id: int | None = Query(default=None),
     responsible_id: UUID | None = Query(default=None),
     repair_status: RepairStatus | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -40,8 +41,8 @@ def list_devices(
         query = query.filter(DeviceModel.inventory_number.ilike(f"%{inventory_number}%"))
     if category_id is not None:
         query = query.filter(DeviceModel.category_id == category_id)
-    if cabinet is not None:
-        query = query.filter(DeviceModel.cabinet.ilike(f"%{cabinet}%"))
+    if audience_id is not None:
+        query = query.filter(DeviceModel.audience_id == audience_id)
     if responsible_id is not None:
         query = query.filter(DeviceModel.responsible_id == responsible_id)
     if repair_status is not None:
@@ -49,7 +50,7 @@ def list_devices(
 
     total = query.count()
     items = (
-        query.order_by(DeviceModel.created_at.desc())
+        query.order_by(DeviceModel.audience_id, DeviceModel.created_at.desc())
         .offset(offset)
         .limit(limit)
         .all()
