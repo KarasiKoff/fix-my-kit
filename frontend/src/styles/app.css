@@ -37,13 +37,39 @@ a {
   gap: 14px;
 }
 
-.topbar-nav a {
+.topbar-nav a,
+.topbar-nav .nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 120px;
+  flex: 1 1 0;
+  padding: 10px 16px;
+  border-radius: 10px;
   color: #dbeafe;
+  background: transparent;
+  border: 1px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 220ms ease, color 220ms ease, transform 220ms ease, border-color 220ms ease;
 }
 
-.topbar-nav a.active {
+.topbar-nav a:hover,
+.topbar-nav .nav-button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.topbar-nav a.active,
+.topbar-nav .nav-button.active {
   color: #fff;
   font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .page {
