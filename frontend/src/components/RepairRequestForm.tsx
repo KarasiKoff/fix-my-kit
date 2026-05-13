@@ -31,8 +31,6 @@ export function RepairRequestForm({
         }
     }, [devices, deviceId]);
 
-    const selectedDevice = devices.find((d) => d.id === deviceId);
-
     return (
         <form
             className="request-form"
@@ -59,18 +57,6 @@ export function RepairRequestForm({
                     )}
                 </select>
             </label>
-            {selectedDevice ? (
-                <div className="repair-context" aria-live="polite">
-                    <div className="repair-context-row">
-                        <span className="repair-context-label">Категория</span>
-                        <span className="repair-context-value">{selectedDevice.category}</span>
-                    </div>
-                    <div className="repair-context-row">
-                        <span className="repair-context-label">Кабинет</span>
-                        <span className="repair-context-value">{selectedDevice.room}</span>
-                    </div>
-                </div>
-            ) : null}
             <label>
                 Фамилия и имя
                 <input value={name} onChange={(e) => setName(e.target.value)} />
