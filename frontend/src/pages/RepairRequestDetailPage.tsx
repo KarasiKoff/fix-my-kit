@@ -13,6 +13,7 @@ import {
 import { Device } from '../types/device';
 import { RepairRequestDetail } from '../types/repairRequest';
 import { useToast } from '../context/ToastContext';
+import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 
 function formatApiError(err: unknown): string {
@@ -152,7 +153,10 @@ export function RepairRequestDetailPage() {
             <section className="card card-form card--narrow-device">
                 <div className="device-title-row">
                     <p>
-                        <strong>Статус:</strong> {request.status}
+                        <strong>Статус:</strong>{' '}
+                        <span className={repairRequestStatusPillClass(request.status)} style={{ marginLeft: 6 }}>
+                            {repairRequestStatusLabel(request.status)}
+                        </span>
                         {synced ? (
                             <span className="badge ok" style={{ marginLeft: 8 }}>
                                 Трекер
@@ -219,7 +223,7 @@ export function RepairRequestDetailPage() {
                     <div className="actions-row request-actions">
                         {apiSt === 'open' ? (
                             <button type="button" className="btn-primary" onClick={() => void setStatus('in_progress')}>
-                                Взять в работу (in_progress)
+                                Взять в работу
                             </button>
                         ) : null}
                         <button type="button" className="btn-primary" onClick={() => void markTaken()}>

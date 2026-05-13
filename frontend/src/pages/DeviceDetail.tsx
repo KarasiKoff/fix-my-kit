@@ -5,6 +5,7 @@ import { fetchDeviceById, fetchDeviceHistory, updateDeviceStatus } from '../api/
 import { Device } from '../types/device';
 import { RepairHistoryEntry } from '../types/repairHistory';
 import { useToast } from '../context/ToastContext';
+import { deviceHistoryStatusLabel, deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 
 function formatApiError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -20,9 +21,7 @@ function formatApiError(err: unknown): string {
 }
 
 function formatHistoryLine(entry: RepairHistoryEntry): string {
-    const oldPart = entry.oldStatus ?? '—';
-    const newPart = entry.newStatus ?? '—';
-    return `${oldPart} → ${newPart}`;
+    return `${deviceHistoryStatusLabel(entry.oldStatus)} → ${deviceHistoryStatusLabel(entry.newStatus)}`;
 }
 
 export function DeviceDetail() {
@@ -91,7 +90,7 @@ export function DeviceDetail() {
             <section className="card">
                 <div className="device-title-row">
                     <h3>{device.name}</h3>
-                    <span className={`badge ${device.status === 'in_repair' ? 'danger' : 'ok'}`}>{device.status}</span>
+                    <span className={deviceRepairStatusPillClass(device.status)}>{deviceRepairStatusLabel(device.status)}</span>
                 </div>
                 <div className="grid grid-2">
                     <p>
@@ -115,10 +114,10 @@ export function DeviceDetail() {
                 </div>
                 <div className="actions-row">
                     <button type="button" onClick={() => void handleStatusChange('in_repair', '')}>
-                        Перевести в in_repair
+                        Перевести в «В ремонте»
                     </button>
                     <button type="button" onClick={() => void handleStatusChange('not_in_repair', '')}>
-                        Перевести в not_in_repair
+                        Перевести в «Исправно»
                     </button>
                     <Link to={`/repair?deviceId=${device.id}`}>Создать заявку</Link>
                 </div>

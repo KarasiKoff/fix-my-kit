@@ -4,6 +4,7 @@ import { useAppData } from '../context/AppDataContext';
 import { useToast } from '../context/ToastContext';
 import { ApiError } from '../api/client';
 import { isRepairRequestSynced, syncAllUnsynchronizedRepairRequests, syncRepairRequestTracker } from '../api/repairRequests';
+import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 
 function formatApiError(err: unknown): string {
@@ -87,7 +88,11 @@ export function RepairRequests() {
                                                 </Link>
                                             </td>
                                             <td>{request.requesterName}</td>
-                                            <td>{request.status}</td>
+                                            <td className="status-cell">
+                                                <span className={repairRequestStatusPillClass(request.status)}>
+                                                    {repairRequestStatusLabel(request.status)}
+                                                </span>
+                                            </td>
                                             <td>
                                                 {synced ? (
                                                     trackerHref ? (

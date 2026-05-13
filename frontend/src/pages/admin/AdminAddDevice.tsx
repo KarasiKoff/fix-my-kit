@@ -8,6 +8,7 @@ import { fetchCategories, type CategoryDto } from '../../api/categories';
 import { fetchAudiences, type AudienceDto } from '../../api/audiences';
 import { fetchUsers, type UserListItem } from '../../api/users';
 import { Device } from '../../types/device';
+import { deviceRepairStatusLabel } from '../../utils/statusDisplay';
 
 function formatApiError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -153,8 +154,8 @@ export function AdminAddDevice() {
                     <label className="admin-device-field">
                         <span className="admin-inline-label">Статус</span>
                         <select value={status} onChange={(e) => setStatus(e.target.value as Device['status'])}>
-                            <option value="not_in_repair">not_in_repair</option>
-                            <option value="in_repair">in_repair</option>
+                            <option value="not_in_repair">{deviceRepairStatusLabel('not_in_repair')}</option>
+                            <option value="in_repair">{deviceRepairStatusLabel('in_repair')}</option>
                         </select>
                     </label>
                     <div className="admin-device-actions">
