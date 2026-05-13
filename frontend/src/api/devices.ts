@@ -7,7 +7,8 @@ type DeviceApi = {
     name: string;
     category?: { name: string } | null;
     serial_number?: string | null;
-    cabinet?: string | null;
+    audience_id?: number | null;
+    audience?: { name: string } | null;
     responsible?: { full_name?: string | null; login: string } | null;
     repair_status: Device['status'];
 };
@@ -19,7 +20,8 @@ function mapDevice(item: DeviceApi): Device {
         name: item.name,
         category: item.category?.name ?? '',
         serialNumber: item.serial_number ?? '',
-        room: item.cabinet ?? '',
+        audienceId: item.audience_id ?? null,
+        audienceName: item.audience?.name ?? '',
         responsible: item.responsible?.full_name ?? item.responsible?.login ?? '',
         status: item.repair_status,
         takenBySysadmin: item.repair_status === 'in_repair',

@@ -7,10 +7,10 @@ export function NewRepairRequest() {
     const [searchParams] = useSearchParams();
     const preselectedDeviceId = searchParams.get('deviceId') ?? undefined;
     const { devices, createRepairRequest } = useAppData();
-    const [selectedRoom, setSelectedRoom] = useState('');
+    const [selectedAudience, setSelectedAudience] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
 
-    const rooms = useMemo(() => Array.from(new Set(devices.map((device) => device.room))).sort(), [devices]);
+    const audiences = useMemo(() => Array.from(new Set(devices.map((device) => device.audienceName))).sort(), [devices]);
     const categories = useMemo(
         () => Array.from(new Set(devices.map((device) => device.category))).sort(),
         [devices],
@@ -19,11 +19,11 @@ export function NewRepairRequest() {
     const filteredDevices = useMemo(
         () =>
             devices.filter((device) => {
-                const roomMatches = selectedRoom === '' || device.room === selectedRoom;
+                const audienceMatches = selectedAudience === '' || device.audienceName === selectedAudience;
                 const categoryMatches = selectedCategory === '' || device.category === selectedCategory;
-                return roomMatches && categoryMatches;
+                return audienceMatches && categoryMatches;
             }),
-        [devices, selectedRoom, selectedCategory],
+        [devices, selectedAudience, selectedCategory],
     );
 
     function handleSubmit(data: { deviceId: string; name: string; description: string }) {
@@ -40,12 +40,12 @@ export function NewRepairRequest() {
             <section className="card">
                 <div className="grid grid-3">
                     <label>
-                        Кабинет
-                        <select value={selectedRoom} onChange={(event) => setSelectedRoom(event.target.value)}>
-                            <option value="">Все кабинеты</option>
-                            {rooms.map((room) => (
-                                <option key={room} value={room}>
-                                    {room}
+                        Аудитория
+                        <select value={selectedAudience} onChange={(event) => setSelectedAudience(event.target.value)}>
+                            <option value="">Все аудитории</option>
+                            {audiences.map((audience) => (
+                                <option key={audience} value={audience}>
+                                    {audience}
                                 </option>
                             ))}
                         </select>
