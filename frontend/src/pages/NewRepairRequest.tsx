@@ -35,10 +35,10 @@ export function NewRepairRequest() {
     }
 
     return (
-        <main className="page">
+        <main className="page page--wide">
             <h2>Новая заявка на ремонт</h2>
-            <section className="card">
-                <div className="grid grid-3">
+            <section className="card card-form card--narrow-device">
+                <div className="repair-filters-row">
                     <label>
                         Кабинет
                         <select value={selectedRoom} onChange={(event) => setSelectedRoom(event.target.value)}>

@@ -33,7 +33,7 @@ export function RepairRequestForm({
 
     return (
         <form
-            className="request-form"
+            className="repair-request-form"
             onSubmit={(event) => {
                 event.preventDefault();
                 if (!deviceId) {
