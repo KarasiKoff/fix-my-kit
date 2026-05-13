@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { RepairRequestForm } from '../components/RepairRequestForm';
 import { useAppData } from '../context/AppDataContext';
@@ -6,10 +6,28 @@ import { useAppData } from '../context/AppDataContext';
 export function NewRepairRequest() {
     const [searchParams] = useSearchParams();
     const preselectedDeviceId = searchParams.get('deviceId') ?? undefined;
-    const { devices, repairRequests, getDeviceById, createRepairRequest } = useAppData();
+    const { devices, createRepairRequest, repairRequests, getDeviceById } = useAppData();
+    const [selectedRoom, setSelectedRoom] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+
+    const rooms = useMemo(() => Array.from(new Set(devices.map((device) => device.room))).sort(), [devices]);
+    const categories = useMemo(
+        () => Array.from(new Set(devices.map((device) => device.category))).sort(),
+        [devices],
+    );
+
+    const filteredDevices = useMemo(
+        () =>
+            devices.filter((device) => {
+                const roomMatches = selectedRoom === '' || device.room === selectedRoom;
+                const categoryMatches = selectedCategory === '' || device.category === selectedCategory;
+                return roomMatches && categoryMatches;
+            }),
+        [devices, selectedRoom, selectedCategory],
+    );
 
     function handleSubmit(data: { deviceId: string; name: string; description: string }) {
-        createRepairRequest({
+        void createRepairRequest({
             deviceId: data.deviceId,
             requesterName: data.name,
             description: data.description,
@@ -21,7 +39,31 @@ export function NewRepairRequest() {
             <div className="repair-page-inner">
                 <h2>Новая заявка на ремонт</h2>
                 <section className="card">
-                    <RepairRequestForm devices={devices} initialDeviceId={preselectedDeviceId} onSubmit={handleSubmit} />
+                    <div className="grid grid-2">
+                        <label>
+                            Кабинет
+                            <select value={selectedRoom} onChange={(event) => setSelectedRoom(event.target.value)}>
+                                <option value="">Все кабинеты</option>
+                                {rooms.map((room) => (
+                                    <option key={room} value={room}>
+                                        {room}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label>
+                            Тип устройства
+                            <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
+                                <option value="">Все категории</option>
+                                {categories.map((category) => (
+                                    <option key={category} value={category}>
+                                        {category}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+                    <RepairRequestForm devices={filteredDevices} initialDeviceId={preselectedDeviceId} onSubmit={handleSubmit} />
                 </section>
                 <section className="card">
                     <h3>Созданные заявки</h3>

@@ -10,7 +10,7 @@ export function UsersManagement() {
     const [roleFilter, setRoleFilter] = React.useState<'all' | User['role']>('all');
     const [draft, setDraft] = React.useState({
         login: '',
-        fullName: '',
+        name: '',
         role: 'sysadmin' as StaffRole,
     });
 
@@ -19,12 +19,12 @@ export function UsersManagement() {
         const matchesRole = roleFilter === 'all' || user.role === roleFilter;
         const matchesQuery =
             normalizedQuery === '' ||
-            user.login.toLowerCase().includes(normalizedQuery) ||
-            user.fullName.toLowerCase().includes(normalizedQuery);
+            (user.login?.toLowerCase().includes(normalizedQuery) ?? false) ||
+            user.name.toLowerCase().includes(normalizedQuery);
         return matchesRole && matchesQuery;
     });
 
-    const canSubmit = draft.login.trim() && draft.fullName.trim();
+    const canSubmit = Boolean(draft.login.trim() && draft.name.trim());
 
     const onSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
         event.preventDefault();
@@ -33,11 +33,11 @@ export function UsersManagement() {
         }
         createUser({
             login: draft.login.trim(),
-            fullName: draft.fullName.trim(),
+            name: draft.name.trim(),
             role: draft.role,
             isActive: true,
         });
-        setDraft({ login: '', fullName: '', role: 'sysadmin' });
+        setDraft({ login: '', name: '', role: 'sysadmin' });
     };
 
     return (
@@ -81,20 +81,20 @@ export function UsersManagement() {
                         <tbody>
                             {filteredUsers.map((user) => (
                                 <tr key={user.id}>
-                                    <td>{user.login}</td>
-                                    <td>{user.fullName}</td>
+                                    <td>{user.login ?? '—'}</td>
+                                    <td>{user.name}</td>
                                     <td>
                                         <span className={`role-pill role-${user.role}`}>{user.role}</span>
                                     </td>
-                                    <td>{user.isActive ? 'Активен' : 'Выключен'}</td>
+                                    <td>{user.isActive !== false ? 'Активен' : 'Выключен'}</td>
                                     <td className="td-actions">
                                         <div className="action-toolbar">
                                             <button
                                                 type="button"
                                                 className="btn-action"
-                                                onClick={() => updateUser(user.id, { isActive: !user.isActive })}
+                                                onClick={() => updateUser(user.id, { isActive: !(user.isActive !== false) })}
                                             >
-                                                {user.isActive ? 'Отключить' : 'Включить'}
+                                                {user.isActive !== false ? 'Отключить' : 'Включить'}
                                             </button>
                                             <select
                                                 className="role-select-compact"
@@ -103,7 +103,7 @@ export function UsersManagement() {
                                                     const next = event.target.value as User['role'];
                                                     updateUser(user.id, { role: next });
                                                 }}
-                                                aria-label={`Роль пользователя ${user.login}`}
+                                                aria-label={`Роль пользователя ${user.login ?? user.id}`}
                                             >
                                                 {user.role === 'guest' ? <option value="guest">guest</option> : null}
                                                 <option value="admin">admin</option>
@@ -136,8 +136,8 @@ export function UsersManagement() {
                         <label>
                             ФИО
                             <input
-                                value={draft.fullName}
-                                onChange={(event) => setDraft((prev) => ({ ...prev, fullName: event.target.value }))}
+                                value={draft.name}
+                                onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
                                 placeholder="Иван Иванов"
                             />
                         </label>

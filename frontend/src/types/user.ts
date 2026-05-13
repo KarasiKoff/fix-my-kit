@@ -1,7 +1,7 @@
 export type User = {
     id: string;
-    login: string;
-    fullName: string;
+    name: string;
+    login?: string;
     role: 'guest' | 'admin' | 'sysadmin';
-    isActive: boolean;
+    isActive?: boolean;
 };

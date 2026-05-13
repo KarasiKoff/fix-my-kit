@@ -1542,3 +1542,7 @@ table.table-devices-admin .td-actions {
     padding: 8px 12px;
   }
 }
+
+.error-text {
+  color: #b91c1c;
+}
