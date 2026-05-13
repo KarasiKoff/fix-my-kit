@@ -86,6 +86,16 @@ def update_user(
         )
 
     update_data = user_data.model_dump(exclude_unset=True)
+    if user_id == current_admin.id and update_data.get("is_active") is False:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cannot_deactivate_self",
+        )
+    if user_id == current_admin.id and "role" in update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cannot_change_own_role",
+        )
     for key, value in update_data.items():
         setattr(user, key, value)
 

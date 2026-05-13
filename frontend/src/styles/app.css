@@ -256,6 +256,16 @@ a:hover {
   text-align: right;
 }
 
+.page--centered .admin-page-head.admin-page-head--edges {
+  max-width: var(--centered-narrow);
+  margin-inline: auto;
+}
+
+/* Панель действий по заявке: код на месте, отображение отключено */
+.request-actions-panel {
+  display: none;
+}
+
 @media (max-width: 540px) {
   .admin-page-head--edges .page-title {
     flex-basis: 100%;
@@ -622,6 +632,77 @@ a:hover {
 
 .grid-2 {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.repair-request-detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  margin-top: 4px;
+}
+
+.repair-detail-line {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.repair-detail-line__label {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.repair-detail-line__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.repair-detail-description {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.repair-detail-description .repair-detail-line__label {
+  flex: 0 0 auto;
+}
+
+.repair-detail-description .request-description-block {
+  margin: 0;
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-x: visible;
+}
+
+.admin-password-reset {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.admin-password-reset-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.admin-password-reset-actions .btn-primary,
+.admin-password-reset-actions .btn-ghost {
+  width: 100%;
+  min-height: 48px;
+  white-space: nowrap;
 }
 
 input,

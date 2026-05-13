@@ -98,10 +98,11 @@ export function AdminUsersPanel() {
         if (!isAdmin || !editingId) {
             return;
         }
+        const editingSelf = Boolean(user?.id && editingId === user.id);
         try {
             await updateUser(editingId, {
                 full_name: editDraft.fullName.trim() || null,
-                role: editDraft.role,
+                ...(editingSelf ? {} : { role: editDraft.role }),
             });
             setEditingId(null);
             showSuccess('Сохранено');
@@ -111,8 +112,14 @@ export function AdminUsersPanel() {
         }
     }
 
+    const isCurrentUser = (u: UserListItem) => Boolean(user?.id && u.id === user.id);
+
     async function toggleActive(u: UserListItem) {
         if (!isAdmin) {
+            return;
+        }
+        if (isCurrentUser(u) && u.isActive) {
+            showError('Нельзя отключить свою учётную запись');
             return;
         }
         try {
@@ -215,7 +222,7 @@ export function AdminUsersPanel() {
                             <span className="admin-inline-label">Новый пароль</span>
                             <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
                         </label>
-                        <div className="admin-inline-actions">
+                        <div className="admin-password-reset-actions">
                             <button type="button" className="btn-primary" disabled={!isAdmin} onClick={() => void applyPasswordReset()}>
                                 Сохранить пароль
                             </button>
@@ -268,16 +275,24 @@ export function AdminUsersPanel() {
                                         </td>
                                         <td>
                                             {editingId === u.id ? (
-                                                <select
-                                                    value={editDraft.role}
-                                                    onChange={(e) =>
-                                                        setEditDraft((d) => ({ ...d, role: e.target.value as typeof d.role }))
-                                                    }
-                                                    disabled={!isAdmin}
-                                                >
-                                                    <option value="admin">Администратор</option>
-                                                    <option value="sysadmin">Сисадмин</option>
-                                                </select>
+                                                isCurrentUser(u) ? (
+                                                    u.role === 'admin' ? (
+                                                        'Администратор'
+                                                    ) : (
+                                                        'Сисадмин'
+                                                    )
+                                                ) : (
+                                                    <select
+                                                        value={editDraft.role}
+                                                        onChange={(e) =>
+                                                            setEditDraft((d) => ({ ...d, role: e.target.value as typeof d.role }))
+                                                        }
+                                                        disabled={!isAdmin}
+                                                    >
+                                                        <option value="admin">Администратор</option>
+                                                        <option value="sysadmin">Сисадмин</option>
+                                                    </select>
+                                                )
                                             ) : u.role === 'admin' ? (
                                                 'Администратор'
                                             ) : (
@@ -305,7 +320,13 @@ export function AdminUsersPanel() {
                                                     <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(u)}>
                                                         Изменить
                                                     </button>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void toggleActive(u)}>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-ghost btn-compact"
+                                                        disabled={!isAdmin || (isCurrentUser(u) && u.isActive)}
+                                                        title={isCurrentUser(u) && u.isActive ? 'Нельзя отключить свою учётную запись' : undefined}
+                                                        onClick={() => void toggleActive(u)}
+                                                    >
                                                         {u.isActive ? 'Отключить' : 'Включить'}
                                                     </button>
                                                     <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => setResetUserId(u.id)}>

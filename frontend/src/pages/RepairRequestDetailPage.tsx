@@ -115,7 +115,7 @@ export function RepairRequestDetailPage() {
 
     if (loading) {
         return (
-            <main className="page">
+            <main className="page page--wide page--centered">
                 <h2>Заявка</h2>
                 <p>Загрузка…</p>
             </main>
@@ -124,7 +124,7 @@ export function RepairRequestDetailPage() {
 
     if (!request) {
         return (
-            <main className="page">
+            <main className="page page--wide page--centered">
                 <h2>Заявка</h2>
                 <p>Не найдена.</p>
                 <button type="button" className="btn-ghost" onClick={() => navigate('/requests')}>
@@ -139,7 +139,7 @@ export function RepairRequestDetailPage() {
     const canAct = apiSt !== 'closed';
 
     return (
-        <main className="page page--wide">
+        <main className="page page--wide page--centered">
             <div className="admin-page-head admin-page-head--edges">
                 <button type="button" className="admin-back-link" onClick={() => navigate('/requests')}>
                     ← К заявкам
@@ -147,7 +147,7 @@ export function RepairRequestDetailPage() {
                 <h2 className="page-title">Заявка на ремонт</h2>
             </div>
 
-            <section className="card card--stretch">
+            <section className="card card-form card--narrow-device">
                 <div className="device-title-row">
                     <p>
                         <strong>Статус:</strong> {request.status}
@@ -167,45 +167,52 @@ export function RepairRequestDetailPage() {
                         </button>
                     ) : null}
                 </div>
-                <div className="grid grid-2">
-                    <p>
-                        <strong>Устройство:</strong>{' '}
-                        {device ? (
-                            <Link to={`/devices/${device.id}`}>
-                                {device.inventoryNumber} — {device.name}
-                            </Link>
-                        ) : (
-                            request.deviceId
-                        )}
-                    </p>
-                    <p>
-                        <strong>Заявитель:</strong> {request.requesterName || '—'}
-                    </p>
-                    <p>
-                        <strong>Создана:</strong> {new Date(request.createdAt).toLocaleString('ru-RU')}
-                    </p>
+                <div className="repair-request-detail-stack">
+                    <div className="repair-detail-line">
+                        <span className="repair-detail-line__label">Устройство:</span>
+                        <span className="repair-detail-line__value">
+                            {device ? (
+                                <Link to={`/devices/${device.id}`}>
+                                    {device.inventoryNumber} — {device.name}
+                                </Link>
+                            ) : (
+                                request.deviceId
+                            )}
+                        </span>
+                    </div>
+                    <div className="repair-detail-line">
+                        <span className="repair-detail-line__label">Заявитель:</span>
+                        <span className="repair-detail-line__value">{request.requesterName || '—'}</span>
+                    </div>
+                    <div className="repair-detail-line">
+                        <span className="repair-detail-line__label">Создана:</span>
+                        <span className="repair-detail-line__value">{new Date(request.createdAt).toLocaleString('ru-RU')}</span>
+                    </div>
                     {request.ticketUrl ? (
-                        <p>
-                            <strong>Тикет:</strong>{' '}
-                            <a href={request.ticketUrl} target="_blank" rel="noreferrer">
-                                {request.ticketKey ?? request.ticketUrl}
-                            </a>
-                        </p>
+                        <div className="repair-detail-line">
+                            <span className="repair-detail-line__label">Тикет:</span>
+                            <span className="repair-detail-line__value">
+                                <a href={request.ticketUrl} target="_blank" rel="noreferrer">
+                                    {request.ticketKey ?? request.ticketUrl}
+                                </a>
+                            </span>
+                        </div>
+                    ) : null}
+                    <div className="repair-detail-description">
+                        <span className="repair-detail-line__label">Описание:</span>
+                        <p className="request-description-block">{request.description}</p>
+                    </div>
+                    {request.resolutionNote ? (
+                        <div className="repair-detail-line">
+                            <span className="repair-detail-line__label">Итог:</span>
+                            <span className="repair-detail-line__value">{request.resolutionNote}</span>
+                        </div>
                     ) : null}
                 </div>
-                <p>
-                    <strong>Описание:</strong>
-                </p>
-                <p className="request-description-block">{request.description}</p>
-                {request.resolutionNote ? (
-                    <p>
-                        <strong>Итог:</strong> {request.resolutionNote}
-                    </p>
-                ) : null}
             </section>
 
             {canAct ? (
-                <section className="card card--stretch">
+                <section className="card card-form card--narrow-device request-actions-panel">
                     <h3>Действия</h3>
                     <div className="actions-row request-actions">
                         {apiSt === 'open' ? (
