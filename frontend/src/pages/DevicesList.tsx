@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
 
 export function DevicesList() {
-    const { devices, isLoading, error } = useAppData();
+    const { devices, categories, cabinets, users, isLoading, error } = useAppData();
     const [filters, setFilters] = React.useState({
         inventoryNumber: '',
         category: '',
@@ -34,21 +34,39 @@ export function DevicesList() {
                         value={filters.inventoryNumber}
                         onChange={(event) => setFilters((prev) => ({ ...prev, inventoryNumber: event.target.value }))}
                     />
-                    <input
-                        placeholder="Категория"
+                    <select
                         value={filters.category}
                         onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))}
-                    />
-                    <input
-                        placeholder="Кабинет"
+                    >
+                        <option value="">Любая категория</option>
+                        {categories.map((category) => (
+                            <option key={category} value={category}>
+                                {category}
+                            </option>
+                        ))}
+                    </select>
+                    <select
                         value={filters.room}
                         onChange={(event) => setFilters((prev) => ({ ...prev, room: event.target.value }))}
-                    />
-                    <input
-                        placeholder="Ответственный"
+                    >
+                        <option value="">Любой кабинет</option>
+                        {cabinets.map((cabinet) => (
+                            <option key={cabinet} value={cabinet}>
+                                {cabinet}
+                            </option>
+                        ))}
+                    </select>
+                    <select
                         value={filters.responsible}
                         onChange={(event) => setFilters((prev) => ({ ...prev, responsible: event.target.value }))}
-                    />
+                    >
+                        <option value="">Любой ответственный</option>
+                        {users.map((user) => (
+                            <option key={user.id} value={user.name}>
+                                {user.name}
+                            </option>
+                        ))}
+                    </select>
                     <select
                         value={filters.status}
                         onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
