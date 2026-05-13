@@ -36,10 +36,10 @@ export function DeviceDetail() {
                     <p><strong>Забрал сисадмин:</strong> {device.takenBySysadmin ? 'Да' : 'Нет'}</p>
                 </div>
                 <div className="actions-row">
-                    <button type="button" onClick={() => setDeviceStatus(device.id, 'in_repair', 'Статус изменен вручную.')}>
+                    <button type="button" onClick={() => void setDeviceStatus(device.id, 'in_repair', 'Статус изменен вручную.')}>
                         Перевести в in_repair
                     </button>
-                    <button type="button" onClick={() => setDeviceStatus(device.id, 'not_in_repair', 'Ремонт завершен.')}>
+                    <button type="button" onClick={() => void setDeviceStatus(device.id, 'not_in_repair', 'Ремонт завершен.')}>
                         Перевести в not_in_repair
                     </button>
                     <Link to={`/repair?deviceId=${device.id}`}>Создать заявку</Link>

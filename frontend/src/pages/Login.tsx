@@ -1,11 +1,35 @@
-import React, { useContext, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export function Login() {
-    const { user, signIn, signOut } = useContext(AuthContext);
-    const [username, setUsername] = useState('admin');
-    const [password, setPassword] = useState('password');
+    const { isAuthenticated, user, signIn, signOut, isLoading } = useAuth();
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
+
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setError(null);
+
+        try {
+            await signIn(username, password);
+            navigate('/devices', { replace: true });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Ошибка входа');
+        }
+    }
+
+    if (isLoading) {
+        return (
+            <div className="login-shell">
+                <main className="login-main">
+                    <p className="text-muted">Загрузка...</p>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="login-shell">
@@ -38,7 +62,7 @@ export function Login() {
                             автоматически).
                         </p>
 
-                        {user ? (
+                        {isAuthenticated && user ? (
                             <div className="login-logged">
                                 <p className="login-logged-text">
                                     Вы вошли как <strong>{user.name}</strong>
@@ -51,13 +75,8 @@ export function Login() {
                                 </NavLink>
                             </div>
                         ) : (
-                            <form
-                                className="login-form"
-                                onSubmit={(event) => {
-                                    event.preventDefault();
-                                    signIn(username, password);
-                                }}
-                            >
+                            <form className="login-form" onSubmit={handleSubmit}>
+                                {error ? <p className="text-danger">{error}</p> : null}
                                 <label className="login-field">
                                     <span className="login-label">Логин</span>
                                     <input

@@ -1,10 +1,10 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { BrowserRouter, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
 import { Login } from '../pages/Login';
 import { DevicesList } from '../pages/DevicesList';
 import { DeviceDetail } from '../pages/DeviceDetail';
 import { NewRepairRequest } from '../pages/NewRepairRequest';
+import { RepairRequests } from '../pages/RepairRequests';
 import { UsersManagement } from '../pages/UsersManagement';
 import { QRScan } from '../pages/QRScan';
 import { AdminAddDevice } from '../pages/AdminAddDevice';
@@ -13,11 +13,48 @@ import { AdminLayout } from '../pages/admin/AdminLayout';
 import { AdminCategories } from '../pages/admin/AdminCategories';
 import { AdminCabinets } from '../pages/admin/AdminCabinets';
 import { AdminDevicesManagement } from '../pages/admin/AdminDevicesManagement';
+import { useAuth } from '../hooks/useAuth';
+
+function RequireAuth({ children }: { children: JSX.Element }) {
+    const { isAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return (
+            <main className="page">
+                <p>Загрузка...</p>
+            </main>
+        );
+    }
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return children;
+}
+
+function RequireGuest({ children }: { children: JSX.Element }) {
+    const { isAuthenticated, isLoading } = useAuth();
+
+    if (isLoading) {
+        return (
+            <main className="page">
+                <p>Загрузка...</p>
+            </main>
+        );
+    }
+
+    if (isAuthenticated) {
+        return <Navigate to="/devices" replace />;
+    }
+
+    return children;
+}
 
 function AppShell() {
     const { pathname } = useLocation();
     const navigate = useNavigate();
-    const { user, signOut } = useContext(AuthContext);
+    const { isAuthenticated, signOut } = useAuth();
     const hideMainTopbar = pathname === '/login';
 
     function handleLogout() {
@@ -31,11 +68,12 @@ function AppShell() {
                 <header className="topbar">
                     <h1>Fix My Kit</h1>
                     <nav className="topbar-nav">
-                        <NavLink to="/devices">Оборудование</NavLink>
+                        {isAuthenticated && <NavLink to="/devices">Оборудование</NavLink>}
                         <NavLink to="/scan">QR</NavLink>
-                        <NavLink to="/repair">Заявки</NavLink>
-                        <NavLink to="/admin">Админка</NavLink>
-                        {user ? (
+                        <NavLink to="/repair">Заявка</NavLink>
+                        {isAuthenticated && <NavLink to="/requests">Все заявки</NavLink>}
+                        {isAuthenticated && <NavLink to="/admin">Админка</NavLink>}
+                        {isAuthenticated ? (
                             <button type="button" className="topbar-nav-logout" onClick={handleLogout}>
                                 Выход
                             </button>
@@ -46,13 +84,14 @@ function AppShell() {
                 </header>
             )}
             <Routes>
-                <Route path="/" element={<Navigate to="/devices" replace />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/devices" element={<DevicesList />} />
-                <Route path="/devices/:id" element={<DeviceDetail />} />
+                <Route path="/" element={isAuthenticated ? <Navigate to="/devices" replace /> : <Navigate to="/repair" replace />} />
+                <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
+                <Route path="/devices" element={<RequireAuth><DevicesList /></RequireAuth>} />
+                <Route path="/devices/:id" element={<RequireAuth><DeviceDetail /></RequireAuth>} />
                 <Route path="/repair" element={<NewRepairRequest />} />
+                <Route path="/requests" element={<RequireAuth><RepairRequests /></RequireAuth>} />
                 <Route path="/users" element={<Navigate to="/admin/users" replace />} />
-                <Route path="/admin" element={<AdminLayout />}>
+                <Route path="/admin" element={<RequireAuth><AdminLayout /></RequireAuth>}>
                     <Route index element={<Navigate to="devices" replace />} />
                     <Route path="categories" element={<AdminCategories />} />
                     <Route path="cabinets" element={<AdminCabinets />} />
