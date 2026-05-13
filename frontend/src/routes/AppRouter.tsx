@@ -7,14 +7,24 @@ import { NewRepairRequest } from '../pages/NewRepairRequest';
 import { RepairRequests } from '../pages/RepairRequests';
 import { UsersManagement } from '../pages/UsersManagement';
 import { QRScan } from '../pages/QRScan';
+import { AdminHub } from '../pages/admin/AdminHub';
+import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
+import { AdminAddCategory } from '../pages/admin/AdminAddCategory';
+import { AdminAddRoom } from '../pages/admin/AdminAddRoom';
+import { AdminAddDevice } from '../pages/admin/AdminAddDevice';
 import { useAuth } from '../hooks/useAuth';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ToastProvider } from '../context/ToastContext';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
     const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) {
-        return <main className="page"><p>Загрузка...</p></main>;
+        return (
+            <main className="page">
+                <p>Загрузка...</p>
+            </main>
+        );
     }
 
     if (!isAuthenticated) {
@@ -28,7 +38,11 @@ function RequireGuest({ children }: { children: JSX.Element }) {
     const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) {
-        return <main className="page"><p>Загрузка...</p></main>;
+        return (
+            <main className="page">
+                <p>Загрузка...</p>
+            </main>
+        );
     }
 
     if (isAuthenticated) {
@@ -38,41 +52,64 @@ function RequireGuest({ children }: { children: JSX.Element }) {
     return children;
 }
 
-export function AppRouter() {
+function AppShell() {
     const { isAuthenticated, signOut } = useAuth();
 
     return (
-        <BrowserRouter>
-            <div className="app-shell">
-                <header className="topbar">
-                    <h1>Fix My Kit</h1>
+        <div className="app-shell">
+            <header className="topbar">
+                <div className="topbar-inner">
+                    <div className="topbar-brand">
+                        <h1>Fix My Kit</h1>
+                    </div>
                     <nav className="topbar-nav">
-                        {isAuthenticated && <NavLink to="/devices">Оборудование</NavLink>}
-                        <NavLink to="/scan">QR</NavLink>
-                        <NavLink to="/repair">Заявка</NavLink>
-                        {isAuthenticated && <NavLink to="/requests">Все заявки</NavLink>}
-                        {isAuthenticated && <NavLink to="/users">Пользователи</NavLink>}
-                        {isAuthenticated && (
-                            <button type="button" className="nav-button" onClick={signOut}>
-                                Выйти
-                            </button>
+                        {!isAuthenticated ? (
+                            <NavLink to="/repair">Главная</NavLink>
+                        ) : (
+                            <>
+                                <NavLink to="/devices">Оборудование</NavLink>
+                                <NavLink to="/scan">QR</NavLink>
+                                <NavLink to="/repair">Заявка</NavLink>
+                                <NavLink to="/requests">Все заявки</NavLink>
+                                <NavLink to="/users">Пользователи</NavLink>
+                                <NavLink to="/admin">Админка</NavLink>
+                                <button type="button" className="nav-button" onClick={signOut}>
+                                    Выйти
+                                </button>
+                            </>
                         )}
                     </nav>
-                </header>
-                <Routes>
-                    <Route
-                        path="/"
-                        element={isAuthenticated ? <Navigate to="/devices" replace /> : <Navigate to="/repair" replace />}
-                    />
-                    <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
-                    <Route path="/devices" element={<RequireAuth><DevicesList /></RequireAuth>} />
-                    <Route path="/devices/:id" element={<RequireAuth><DeviceDetail /></RequireAuth>} />
-                    <Route path="/repair" element={<NewRepairRequest />} />
-                    <Route path="/requests" element={<RequireAuth><RepairRequests /></RequireAuth>} />
-                    <Route path="/users" element={<RequireAuth><UsersManagement /></RequireAuth>} />
-                    <Route path="/scan" element={<ErrorBoundary><QRScan /></ErrorBoundary>} />
-                </Routes>
-            </div>
+                </div>
+            </header>
+            <Routes>
+                <Route
+                    path="/"
+                    element={isAuthenticated ? <Navigate to="/devices" replace /> : <Navigate to="/repair" replace />}
+                />
+                <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
+                <Route path="/devices" element={<RequireAuth><DevicesList /></RequireAuth>} />
+                <Route path="/devices/:id" element={<RequireAuth><DeviceDetail /></RequireAuth>} />
+                <Route path="/repair" element={<NewRepairRequest />} />
+                <Route path="/requests" element={<RequireAuth><RepairRequests /></RequireAuth>} />
+                <Route path="/users" element={<RequireAuth><UsersManagement /></RequireAuth>} />
+                <Route path="/admin" element={<RequireAuth><AdminHub /></RequireAuth>} />
+                <Route path="/admin/users" element={<RequireAuth><AdminUsersPage /></RequireAuth>} />
+                <Route path="/admin/add/category" element={<RequireAuth><AdminAddCategory /></RequireAuth>} />
+                <Route path="/admin/add/room" element={<RequireAuth><AdminAddRoom /></RequireAuth>} />
+                <Route path="/admin/add/device" element={<RequireAuth><AdminAddDevice /></RequireAuth>} />
+                <Route path="/admin/add/user" element={<Navigate to="/admin/users" replace />} />
+                <Route path="/scan" element={<ErrorBoundary><QRScan /></ErrorBoundary>} />
+            </Routes>
+        </div>
+    );
+}
+
+export function AppRouter() {
+    return (
+        <BrowserRouter>
+            <ToastProvider>
+                <AppShell />
+            </ToastProvider>
         </BrowserRouter>
     );
 }
