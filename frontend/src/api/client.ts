@@ -11,15 +11,18 @@ export class ApiError extends Error {
     }
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const method = (init.method ?? 'GET').toUpperCase();
-    const headers = new Headers(init.headers);
+export type ApiRequestOptions = RequestInit & { skipAuth?: boolean };
 
-    if (init.body && !headers.has('Content-Type')) {
+export async function apiRequest<T>(path: string, init: ApiRequestOptions = {}): Promise<T> {
+    const { skipAuth, ...rest } = init;
+    const method = (rest.method ?? 'GET').toUpperCase();
+    const headers = new Headers(rest.headers);
+
+    if (rest.body && !headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json');
     }
 
-    if (!headers.has('Authorization')) {
+    if (!skipAuth && !headers.has('Authorization')) {
         const token = getStoredAuthToken();
         if (token) {
             headers.set('Authorization', `Bearer ${token}`);
@@ -27,7 +30,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     }
 
     const response = await fetch(path, {
-        ...init,
+        ...rest,
         method,
         headers,
     });
@@ -40,7 +43,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     const payload = contentType.includes('application/json') ? await response.json() : await response.text();
 
     if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401 && !skipAuth) {
             clearStoredAuthToken();
         }
         throw new ApiError(response.status, typeof payload === 'object' && payload !== null && 'detail' in payload ? payload.detail : payload);

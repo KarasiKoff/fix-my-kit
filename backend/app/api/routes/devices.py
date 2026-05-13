@@ -5,10 +5,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.api.deps import get_db, require_roles
+from backend.app.core.config import settings
 from backend.app.models.device import Device as DeviceModel
 from backend.app.models.enums import RepairStatus, UserRole
 from backend.app.models.repair_history import RepairHistory
 from backend.app.schemas.device import Device, DeviceCreate, DeviceDetail, DeviceHistoryResponse, DeviceListResponse, DeviceQrResponse, DeviceUpdate
+from backend.app.services.repair_history_service import add_repair_history
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
 
@@ -62,7 +64,7 @@ def list_devices(
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=Device,
-    dependencies=[Depends(require_roles(UserRole.ADMIN))],
+    dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.SYSADMIN))],
 )
 def create_device(payload: DeviceCreate, db: Session = Depends(get_db)) -> Device:
     device = DeviceModel(**payload.model_dump())
@@ -72,8 +74,10 @@ def create_device(payload: DeviceCreate, db: Session = Depends(get_db)) -> Devic
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="inventory_number_exists") from exc
-    db.refresh(device)
-    return Device.model_validate(device)
+    refreshed = _device_base_query(db).filter(DeviceModel.id == device.id).first()
+    if refreshed is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
+    return Device.model_validate(refreshed)
 
 
 @router.get(
@@ -98,8 +102,20 @@ def patch_device(device_id: UUID, payload: DeviceUpdate, db: Session = Depends(g
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    patch_data = payload.model_dump(exclude_unset=True)
+    old_repair_status = device.repair_status
+    for field, value in patch_data.items():
         setattr(device, field, value)
+
+    if "repair_status" in patch_data and device.repair_status != old_repair_status:
+        add_repair_history(
+            db,
+            device_id=device.id,
+            repair_request_id=None,
+            old_status=old_repair_status,
+            new_status=device.repair_status,
+            note="Изменение статуса ремонта устройства",
+        )
 
     try:
         db.commit()
@@ -122,7 +138,8 @@ def get_device_qr(device_id: UUID, db: Session = Depends(get_db)) -> DeviceQrRes
     exists = db.query(DeviceModel.id).filter(DeviceModel.id == device_id).first()
     if exists is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
-    return DeviceQrResponse(device_id=device_id, url=f"https://fixmykit.local/device/{device_id}")
+    base = settings.server.public_frontend_base_url.rstrip("/")
+    return DeviceQrResponse(device_id=device_id, url=f"{base}/repair?deviceId={device_id}")
 
 
 @router.get(

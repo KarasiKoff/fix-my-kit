@@ -3,9 +3,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
-from backend.app.core.security import create_access_token, verify_password
+from backend.app.core.security import create_access_token, hash_password, verify_password
 from backend.app.models.user import User
-from backend.app.schemas.auth import LoginRequest, Token
+from backend.app.schemas.auth import LoginRequest, SelfPasswordUpdate, Token
 from backend.app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -41,3 +41,17 @@ def login_for_swagger(
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_own_password(
+    payload: SelfPasswordUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_current_password")
+
+    current_user.password_hash = hash_password(payload.new_password)
+    db.add(current_user)
+    db.commit()

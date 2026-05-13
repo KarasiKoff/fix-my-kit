@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
-export function QRScanner({ onScan }: { onScan: (value: string) => void }) {
+export function QRScanner({ onScan }: { onScan: (value: string) => void | Promise<void> }) {
     const [manualValue, setManualValue] = useState('');
     const [scanStatus, setScanStatus] = useState('Ожидание запуска камеры');
     const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -20,7 +20,7 @@ export function QRScanner({ onScan }: { onScan: (value: string) => void }) {
                         return;
                     }
                     setScanStatus(`Считано: ${decodedText}`);
-                    onScan(decodedText);
+                    void Promise.resolve(onScan(decodedText)).catch(() => undefined);
                 },
                 () => undefined,
             )
@@ -67,15 +67,18 @@ export function QRScanner({ onScan }: { onScan: (value: string) => void }) {
                     if (manualValue.trim().length === 0) {
                         return;
                     }
-                    onScan(manualValue.trim());
+                    const v = manualValue.trim();
+                    void Promise.resolve(onScan(v))
+                        .then(() => setManualValue(''))
+                        .catch(() => undefined);
                 }}
             >
                 <input
-                    placeholder="Ручной ввод: id устройства или инв. номер"
+                    placeholder="UUID устройства или инвентарный номер"
                     value={manualValue}
                     onChange={(event) => setManualValue(event.target.value)}
                 />
-                <button type="submit">Открыть устройство</button>
+                <button type="submit">Создать заявку</button>
             </form>
         </div>
     );

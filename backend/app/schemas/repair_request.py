@@ -14,6 +14,7 @@ class RepairRequestBase(BaseModel):
 
 class RepairRequestCreate(RepairRequestBase):
     author_user_id: UUID | None = None
+    sync_to_tracker: bool = True
 
 
 class PublicRepairRequestCreate(RepairRequestBase):

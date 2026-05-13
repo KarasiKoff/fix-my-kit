@@ -2,12 +2,12 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.api.deps import get_db, require_admin_or_sysadmin
 from backend.app.models.device import Device
-from backend.app.models.enums import RequestStatus
+from backend.app.models.enums import RepairStatus, RequestStatus
 from backend.app.models.repair_request import RepairRequest
 from backend.app.models.user import User
 from backend.app.schemas.repair_request import (
@@ -21,7 +21,8 @@ from backend.app.schemas.repair_request import (
     RepairRequestStatusUpdate,
     RepairRequestTake,
 )
-from backend.app.schemas.tracker import TrackerSyncResponse
+from backend.app.schemas.tracker import TrackerSyncResponse, TrackerBulkSyncResponse
+from backend.app.services.repair_history_service import add_repair_history
 from backend.app.services.tracker_service import TrackerUnavailableError, sync_repair_request_to_tracker
 
 router = APIRouter(prefix="/api", tags=["repair-requests"])
@@ -68,6 +69,53 @@ def apply_closed_fields(repair_request: RepairRequest, current_user: User, resol
         repair_request.resolution_note = resolution_note
 
 
+def _try_tracker_sync(db: Session, request_id: UUID) -> bool:
+    """Пытается создать/подтянуть задачу в Трекере. При ошибке не бросает исключение наружу."""
+    repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
+    try:
+        result = sync_repair_request_to_tracker(repair_request)
+    except TrackerUnavailableError:
+        return False
+    repair_request.tracker_ticket_id = result.ticket_id
+    repair_request.tracker_ticket_key = result.ticket_key
+    repair_request.tracker_ticket_url = result.ticket_url
+    repair_request.last_sync_at = result.synced_at
+    db.commit()
+    return True
+
+
+def _record_request_closed(db: Session, repair_request: RepairRequest, current_user: User, resolution_note: str | None) -> None:
+    device = db.query(Device).filter(Device.id == repair_request.device_id).first()
+    old_rs = device.repair_status if device else None
+    apply_closed_fields(repair_request, current_user, resolution_note)
+    if device is not None:
+        device.repair_status = RepairStatus.NOT_IN_REPAIR
+        add_repair_history(
+            db,
+            device_id=device.id,
+            repair_request_id=repair_request.id,
+            old_status=old_rs,
+            new_status=RepairStatus.NOT_IN_REPAIR,
+            note="Заявка закрыта",
+        )
+
+
+def _record_request_created(db: Session, repair_request: RepairRequest) -> None:
+    device = db.query(Device).filter(Device.id == repair_request.device_id).first()
+    if device is None:
+        return
+    old_rs = device.repair_status
+    device.repair_status = RepairStatus.IN_REPAIR
+    add_repair_history(
+        db,
+        device_id=device.id,
+        repair_request_id=repair_request.id,
+        old_status=old_rs,
+        new_status=RepairStatus.IN_REPAIR,
+        note="Создана заявка на ремонт",
+    )
+
+
 @router.get("/repair-requests", response_model=RepairRequestList)
 def list_repair_requests(
     status_filter: RequestStatus | None = Query(default=None, alias="status"),
@@ -99,6 +147,38 @@ def list_repair_requests(
     return RepairRequestList(items=[RepairRequestResponse.model_validate(item) for item in items], total=total)
 
 
+@router.post(
+    "/repair-requests/tracker/sync-unsynchronized",
+    response_model=TrackerBulkSyncResponse,
+    status_code=status.HTTP_200_OK,
+)
+def sync_unsynchronized_repair_requests(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_or_sysadmin),
+) -> TrackerBulkSyncResponse:
+    """Синхронизирует с Трекером все заявки без ticket id и key."""
+    rows = (
+        db.query(RepairRequest.id)
+        .filter(
+            and_(
+                or_(RepairRequest.tracker_ticket_id.is_(None), RepairRequest.tracker_ticket_id == ""),
+                or_(RepairRequest.tracker_ticket_key.is_(None), RepairRequest.tracker_ticket_key == ""),
+            )
+        )
+        .order_by(RepairRequest.created_at.asc())
+        .all()
+    )
+    attempted = len(rows)
+    synced = 0
+    failed = 0
+    for (rid,) in rows:
+        if _try_tracker_sync(db, rid):
+            synced += 1
+        else:
+            failed += 1
+    return TrackerBulkSyncResponse(attempted=attempted, synced=synced, failed=failed)
+
+
 @router.post("/repair-requests", response_model=RepairRequestResponse, status_code=status.HTTP_201_CREATED)
 def create_repair_request(
     payload: RepairRequestCreate,
@@ -115,7 +195,13 @@ def create_repair_request(
         author_user_id=payload.author_user_id or current_user.id,
     )
     db.add(repair_request)
+    db.flush()
+    _record_request_created(db, repair_request)
     db.commit()
+    db.refresh(repair_request)
+
+    if payload.sync_to_tracker:
+        _try_tracker_sync(db, repair_request.id)
     db.refresh(repair_request)
     return RepairRequestResponse.model_validate(repair_request)
 
@@ -134,7 +220,12 @@ def create_public_repair_request(
         description=payload.description,
     )
     db.add(repair_request)
+    db.flush()
+    _record_request_created(db, repair_request)
     db.commit()
+    db.refresh(repair_request)
+
+    _try_tracker_sync(db, repair_request.id)
     db.refresh(repair_request)
     return PublicRepairRequestResponse(id=repair_request.id, status=repair_request.status)
 
@@ -161,11 +252,19 @@ def update_repair_request_status(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="invalid_status_transition")
 
     if payload.status == RequestStatus.CLOSED:
-        apply_closed_fields(repair_request, current_user, payload.resolution_note)
+        _record_request_closed(db, repair_request, current_user, payload.resolution_note)
     else:
         repair_request.status = payload.status
         if payload.resolution_note is not None:
             repair_request.resolution_note = payload.resolution_note
+        add_repair_history(
+            db,
+            device_id=repair_request.device_id,
+            repair_request_id=repair_request.id,
+            old_status=None,
+            new_status=None,
+            note=f"Статус заявки изменён: {payload.status.value}",
+        )
 
     db.commit()
     db.refresh(repair_request)
@@ -183,6 +282,14 @@ def take_repair_request(
     if payload.taken:
         repair_request.taken_by_sysadmin_at = datetime.now(timezone.utc)
         repair_request.taken_by_sysadmin_by_user_id = current_user.id
+        add_repair_history(
+            db,
+            device_id=repair_request.device_id,
+            repair_request_id=repair_request.id,
+            old_status=None,
+            new_status=None,
+            note="Отмечено: забрал системный администратор",
+        )
 
     db.commit()
     db.refresh(repair_request)
@@ -200,7 +307,7 @@ def close_repair_request(
     if RequestStatus.CLOSED not in ALLOWED_STATUS_TRANSITIONS[repair_request.status]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="invalid_status_transition")
 
-    apply_closed_fields(repair_request, current_user, payload.resolution_note)
+    _record_request_closed(db, repair_request, current_user, payload.resolution_note)
     db.commit()
     db.refresh(repair_request)
     return RepairRequestDetail.model_validate(repair_request)

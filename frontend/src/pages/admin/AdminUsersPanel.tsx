@@ -1,101 +1,151 @@
-import React, { useMemo, useState } from 'react';
-import { usePersistentJson } from '../../hooks/usePersistentJson';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../hooks/useAuth';
+import { ApiError } from '../../api/client';
+import {
+    adminResetUserPassword,
+    createUser,
+    fetchUsers,
+    updateUser,
+    type UserListItem,
+} from '../../api/users';
 
-export type LocalAdminUser = {
-    id: string;
-    login: string;
-    fullName: string;
-    role: 'admin' | 'sysadmin';
-    status: 'active' | 'disabled';
-    createdAt: string;
-};
-
-const STORAGE_KEY = 'fix-my-kit-admin-users-v1';
-
-function nowIso() {
-    return new Date().toISOString();
+function formatApiError(err: unknown): string {
+    if (err instanceof ApiError) {
+        if (typeof err.detail === 'string') {
+            return err.detail;
+        }
+        return JSON.stringify(err.detail);
+    }
+    if (err instanceof Error) {
+        return err.message;
+    }
+    return 'Ошибка запроса';
 }
 
 export function AdminUsersPanel() {
-    const { showSuccess } = useToast();
-    const [users, setUsers] = usePersistentJson<LocalAdminUser[]>(STORAGE_KEY, []);
+    const { showSuccess, showError } = useToast();
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
+
+    const [users, setUsers] = useState<UserListItem[]>([]);
+    const [loading, setLoading] = useState(true);
     const [login, setLogin] = useState('');
-    const [_password, setPassword] = useState('');
+    const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
-    const [role, setRole] = useState<'admin' | 'sysadmin'>('admin');
+    const [role, setRole] = useState<'admin' | 'sysadmin'>('sysadmin');
     const [search, setSearch] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [editDraft, setEditDraft] = useState({ login: '', fullName: '', role: 'admin' as 'admin' | 'sysadmin' });
+    const [editDraft, setEditDraft] = useState({ fullName: '', role: 'admin' as 'admin' | 'sysadmin' });
+    const [resetUserId, setResetUserId] = useState<string | null>(null);
+    const [resetPassword, setResetPassword] = useState('');
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await fetchUsers({ limit: 100 });
+            setUsers(res.items);
+        } catch (err) {
+            showError(formatApiError(err));
+        } finally {
+            setLoading(false);
+        }
+    }, [showError]);
+
+    useEffect(() => {
+        void load();
+    }, [load]);
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
         if (!q) {
             return users;
         }
-        return users.filter((u) => u.login.toLowerCase().includes(q) || u.fullName.toLowerCase().includes(q));
+        return users.filter(
+            (u) => u.login.toLowerCase().includes(q) || u.name.toLowerCase().includes(q),
+        );
     }, [users, search]);
 
-    function handleCreate(event: React.FormEvent<HTMLFormElement>) {
+    async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!login.trim()) {
+        if (!isAdmin || !login.trim() || !password.trim()) {
             return;
         }
-        setUsers((prev) => [
-            ...prev,
-            {
-                id: crypto.randomUUID(),
+        try {
+            await createUser({
                 login: login.trim(),
-                fullName: fullName.trim(),
+                password: password,
                 role,
-                status: 'active',
-                createdAt: nowIso(),
-            },
-        ]);
-        setLogin('');
-        setPassword('');
-        setFullName('');
-        setRole('admin');
-        showSuccess('Пользователь добавлен');
+                full_name: fullName.trim() || null,
+            });
+            setLogin('');
+            setPassword('');
+            setFullName('');
+            setRole('sysadmin');
+            showSuccess('Пользователь создан');
+            await load();
+        } catch (err) {
+            showError(formatApiError(err));
+        }
     }
 
-    function startEdit(user: LocalAdminUser) {
-        setEditingId(user.id);
-        setEditDraft({ login: user.login, fullName: user.fullName, role: user.role });
+    function startEdit(u: UserListItem) {
+        setEditingId(u.id);
+        setEditDraft({ fullName: u.name === u.login ? '' : u.name, role: u.role });
     }
 
-    function saveEdit() {
-        if (!editingId) {
+    async function saveEdit() {
+        if (!isAdmin || !editingId) {
             return;
         }
-        setUsers((prev) =>
-            prev.map((u) =>
-                u.id === editingId
-                    ? { ...u, login: editDraft.login.trim() || u.login, fullName: editDraft.fullName.trim(), role: editDraft.role }
-                    : u,
-            ),
-        );
-        setEditingId(null);
-    }
-
-    function cancelEdit() {
-        setEditingId(null);
-    }
-
-    function removeUser(id: string) {
-        setUsers((prev) => prev.filter((u) => u.id !== id));
-        if (editingId === id) {
+        const editingSelf = Boolean(user?.id && editingId === user.id);
+        try {
+            await updateUser(editingId, {
+                full_name: editDraft.fullName.trim() || null,
+                ...(editingSelf ? {} : { role: editDraft.role }),
+            });
             setEditingId(null);
+            showSuccess('Сохранено');
+            await load();
+        } catch (err) {
+            showError(formatApiError(err));
         }
     }
 
-    function toggleDisabled(id: string) {
-        setUsers((prev) =>
-            prev.map((u) => (u.id === id ? { ...u, status: u.status === 'active' ? 'disabled' : 'active' } : u)),
-        );
+    const isCurrentUser = (u: UserListItem) => Boolean(user?.id && u.id === user.id);
+
+    async function toggleActive(u: UserListItem) {
+        if (!isAdmin) {
+            return;
+        }
+        if (isCurrentUser(u) && u.isActive) {
+            showError('Нельзя отключить свою учётную запись');
+            return;
+        }
+        try {
+            await updateUser(u.id, { is_active: !u.isActive });
+            showSuccess(u.isActive ? 'Пользователь отключён' : 'Пользователь включён');
+            await load();
+        } catch (err) {
+            showError(formatApiError(err));
+        }
     }
 
-    const activeCount = filtered.filter((u) => u.status === 'active').length;
+    async function applyPasswordReset() {
+        if (!isAdmin || !resetUserId || !resetPassword.trim()) {
+            return;
+        }
+        try {
+            await adminResetUserPassword(resetUserId, resetPassword);
+            setResetUserId(null);
+            setResetPassword('');
+            showSuccess('Пароль обновлён');
+        } catch (err) {
+            showError(formatApiError(err));
+        }
+    }
+
+    const activeCount = filtered.filter((u) => u.isActive).length;
 
     return (
         <>
@@ -109,11 +159,11 @@ export function AdminUsersPanel() {
                         </div>
                         <div className="admin-stat-pill">
                             <span className="admin-stat-value">{users.length}</span>
-                            <span className="admin-stat-label">всего в каталоге</span>
+                            <span className="admin-stat-label">всего</span>
                         </div>
                         <div className="admin-stat-pill">
                             <span className="admin-stat-value">{activeCount}</span>
-                            <span className="admin-stat-label">активных (в списке)</span>
+                            <span className="admin-stat-label">активных</span>
                         </div>
                     </div>
                 </div>
@@ -121,25 +171,31 @@ export function AdminUsersPanel() {
                 <form className="admin-inline-form" onSubmit={handleCreate}>
                     <label className="admin-inline-field">
                         <span className="admin-inline-label">Логин</span>
-                        <input value={login} onChange={(e) => setLogin(e.target.value)} required />
+                        <input value={login} onChange={(e) => setLogin(e.target.value)} required disabled={!isAdmin} />
                     </label>
                     <label className="admin-inline-field">
                         <span className="admin-inline-label">Пароль</span>
-                        <input type="password" value={_password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            autoComplete="new-password"
+                            disabled={!isAdmin}
+                        />
                     </label>
                     <label className="admin-inline-field">
                         <span className="admin-inline-label">ФИО</span>
-                        <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Имя" />
+                        <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Имя" disabled={!isAdmin} />
                     </label>
                     <label className="admin-inline-field admin-inline-field--narrow">
                         <span className="admin-inline-label">Роль</span>
-                        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
+                        <select value={role} onChange={(e) => setRole(e.target.value as typeof role)} disabled={!isAdmin}>
                             <option value="admin">Администратор</option>
                             <option value="sysadmin">Сисадмин</option>
                         </select>
                     </label>
                     <div className="admin-inline-actions">
-                        <button type="submit" className="btn-primary">
+                        <button type="submit" className="btn-primary" disabled={!isAdmin} title={!isAdmin ? 'Только администратор' : undefined}>
                             Создать
                         </button>
                     </div>
@@ -154,7 +210,28 @@ export function AdminUsersPanel() {
                             placeholder="Логин или ФИО..."
                         />
                     </label>
+                    <button type="button" className="btn-ghost btn-compact" onClick={() => void load()}>
+                        Обновить
+                    </button>
                 </div>
+
+                {resetUserId ? (
+                    <div className="card card--nested admin-password-reset">
+                        <p>Новый пароль для пользователя</p>
+                        <label>
+                            <span className="admin-inline-label">Новый пароль</span>
+                            <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
+                        </label>
+                        <div className="admin-password-reset-actions">
+                            <button type="button" className="btn-primary" disabled={!isAdmin} onClick={() => void applyPasswordReset()}>
+                                Сохранить пароль
+                            </button>
+                            <button type="button" className="btn-ghost" onClick={() => setResetUserId(null)}>
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
 
                 <div className="table-wrap admin-table-wrap">
                     <table className="admin-table">
@@ -169,67 +246,91 @@ export function AdminUsersPanel() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.length === 0 ? (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={6} className="admin-table-empty">
+                                        Загрузка…
+                                    </td>
+                                </tr>
+                            ) : users.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="admin-table-empty">
                                         Нет записей
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((user) => (
-                                    <tr key={user.id} className={user.status === 'disabled' ? 'row-disabled' : undefined}>
+                                filtered.map((u) => (
+                                    <tr key={u.id} className={!u.isActive ? 'row-disabled' : undefined}>
+                                        <td>{u.login}</td>
                                         <td>
-                                            {editingId === user.id ? (
-                                                <input value={editDraft.login} onChange={(e) => setEditDraft((d) => ({ ...d, login: e.target.value }))} />
+                                            {editingId === u.id ? (
+                                                <input
+                                                    value={editDraft.fullName}
+                                                    onChange={(e) => setEditDraft((d) => ({ ...d, fullName: e.target.value }))}
+                                                    disabled={!isAdmin}
+                                                />
                                             ) : (
-                                                user.login
+                                                u.name || '—'
                                             )}
                                         </td>
                                         <td>
-                                            {editingId === user.id ? (
-                                                <input value={editDraft.fullName} onChange={(e) => setEditDraft((d) => ({ ...d, fullName: e.target.value }))} />
-                                            ) : (
-                                                user.fullName || '—'
-                                            )}
-                                        </td>
-                                        <td>
-                                            {editingId === user.id ? (
-                                                <select value={editDraft.role} onChange={(e) => setEditDraft((d) => ({ ...d, role: e.target.value as typeof d.role }))}>
-                                                    <option value="admin">Администратор</option>
-                                                    <option value="sysadmin">Сисадмин</option>
-                                                </select>
-                                            ) : user.role === 'admin' ? (
+                                            {editingId === u.id ? (
+                                                isCurrentUser(u) ? (
+                                                    u.role === 'admin' ? (
+                                                        'Администратор'
+                                                    ) : (
+                                                        'Сисадмин'
+                                                    )
+                                                ) : (
+                                                    <select
+                                                        value={editDraft.role}
+                                                        onChange={(e) =>
+                                                            setEditDraft((d) => ({ ...d, role: e.target.value as typeof d.role }))
+                                                        }
+                                                        disabled={!isAdmin}
+                                                    >
+                                                        <option value="admin">Администратор</option>
+                                                        <option value="sysadmin">Сисадмин</option>
+                                                    </select>
+                                                )
+                                            ) : u.role === 'admin' ? (
                                                 'Администратор'
                                             ) : (
                                                 'Сисадмин'
                                             )}
                                         </td>
                                         <td>
-                                            <span className={`status-badge ${user.status === 'disabled' ? 'status-badge--off' : 'status-badge--on'}`}>
-                                                {user.status === 'disabled' ? 'отключён' : 'активен'}
+                                            <span className={`status-badge ${u.isActive ? 'status-badge--on' : 'status-badge--off'}`}>
+                                                {u.isActive ? 'активен' : 'отключён'}
                                             </span>
                                         </td>
-                                        <td>{new Date(user.createdAt).toLocaleString('ru-RU')}</td>
+                                        <td>{new Date(u.createdAt).toLocaleString('ru-RU')}</td>
                                         <td className="admin-row-actions">
-                                            {editingId === user.id ? (
+                                            {editingId === u.id ? (
                                                 <>
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={saveEdit}>
+                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
                                                         Сохранить
                                                     </button>
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={cancelEdit}>
+                                                    <button type="button" className="btn-ghost btn-compact" onClick={() => setEditingId(null)}>
                                                         Отмена
                                                     </button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={() => startEdit(user)}>
+                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(u)}>
                                                         Изменить
                                                     </button>
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={() => toggleDisabled(user.id)}>
-                                                        {user.status === 'disabled' ? 'Включить' : 'Отключить'}
+                                                    <button
+                                                        type="button"
+                                                        className="btn-ghost btn-compact"
+                                                        disabled={!isAdmin || (isCurrentUser(u) && u.isActive)}
+                                                        title={isCurrentUser(u) && u.isActive ? 'Нельзя отключить свою учётную запись' : undefined}
+                                                        onClick={() => void toggleActive(u)}
+                                                    >
+                                                        {u.isActive ? 'Отключить' : 'Включить'}
                                                     </button>
-                                                    <button type="button" className="btn-danger btn-compact" onClick={() => removeUser(user.id)}>
-                                                        Удалить
+                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => setResetUserId(u.id)}>
+                                                        Сброс пароля
                                                     </button>
                                                 </>
                                             )}

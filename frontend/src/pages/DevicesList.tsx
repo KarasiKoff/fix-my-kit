@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
+import { deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 
 export function DevicesList() {
     const { devices, isLoading, error } = useAppData();
@@ -54,8 +55,8 @@ export function DevicesList() {
                         onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
                     >
                         <option value="">Любой статус</option>
-                        <option value="not_in_repair">not_in_repair</option>
-                        <option value="in_repair">in_repair</option>
+                        <option value="not_in_repair">{deviceRepairStatusLabel('not_in_repair')}</option>
+                        <option value="in_repair">{deviceRepairStatusLabel('in_repair')}</option>
                     </select>
                 </div>
             </section>
@@ -83,7 +84,9 @@ export function DevicesList() {
                                     <td>{device.category}</td>
                                     <td>{device.room}</td>
                                     <td>{device.responsible}</td>
-                                    <td>{device.status}</td>
+                                    <td className="status-cell">
+                                        <span className={deviceRepairStatusPillClass(device.status)}>{deviceRepairStatusLabel(device.status)}</span>
+                                    </td>
                                     <td>
                                         <Link to={`/devices/${device.id}`}>Открыть</Link>
                                     </td>

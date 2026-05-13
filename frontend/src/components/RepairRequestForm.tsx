@@ -10,15 +10,25 @@ type FormData = {
 export function RepairRequestForm({
     devices,
     initialDeviceId,
+    deviceSelectDisabled = false,
+    nameRequired = false,
     onSubmit,
 }: {
     devices: Device[];
     initialDeviceId?: string;
-    onSubmit: (data: FormData) => void;
+    deviceSelectDisabled?: boolean;
+    nameRequired?: boolean;
+    onSubmit: (data: FormData) => void | Promise<void>;
 }) {
     const [deviceId, setDeviceId] = useState(initialDeviceId ?? devices[0]?.id ?? '');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+
+    useEffect(() => {
+        if (initialDeviceId) {
+            setDeviceId(initialDeviceId);
+        }
+    }, [initialDeviceId]);
 
     useEffect(() => {
         if (devices.length === 0) {
@@ -34,24 +44,39 @@ export function RepairRequestForm({
     return (
         <form
             className="repair-request-form"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
                 event.preventDefault();
                 if (!deviceId) {
                     return;
                 }
-                onSubmit({ deviceId, name, description });
-                setDescription('');
+                if (nameRequired && !name.trim()) {
+                    return;
+                }
+                try {
+                    await Promise.resolve(onSubmit({ deviceId, name, description }));
+                    setDescription('');
+                    if (nameRequired) {
+                        setName('');
+                    }
+                } catch {
+                    /* ошибку показывает родитель */
+                }
             }}
         >
             <label>
                 Устройство
-                <select value={deviceId} onChange={(event) => setDeviceId(event.target.value)} required disabled={devices.length === 0}>
+                <select
+                    value={deviceId}
+                    onChange={(event) => setDeviceId(event.target.value)}
+                    required
+                    disabled={devices.length === 0 || deviceSelectDisabled}
+                >
                     {devices.length === 0 ? (
                         <option value="">Нет доступных устройств</option>
                     ) : (
                         devices.map((device) => (
                             <option key={device.id} value={device.id}>
-                                {device.inventoryNumber} - {device.name}
+                                {device.inventoryNumber} — {device.name}
                             </option>
                         ))
                     )}
@@ -59,7 +84,7 @@ export function RepairRequestForm({
             </label>
             <label>
                 Фамилия и имя
-                <input value={name} onChange={(e) => setName(e.target.value)} />
+                <input value={name} onChange={(e) => setName(e.target.value)} required={nameRequired} />
             </label>
             <label>
                 Описание

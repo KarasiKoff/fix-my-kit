@@ -72,6 +72,12 @@ a:hover {
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
+.toast--error {
+  background: #ef4444;
+  color: #fff7f7;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
 .topbar {
   display: flex;
   justify-content: stretch;
@@ -250,6 +256,16 @@ a:hover {
   text-align: right;
 }
 
+.page--centered .admin-page-head.admin-page-head--edges {
+  max-width: var(--centered-narrow);
+  margin-inline: auto;
+}
+
+/* Панель действий по заявке: код на месте, отображение отключено */
+.request-actions-panel {
+  display: none;
+}
+
 @media (max-width: 540px) {
   .admin-page-head--edges .page-title {
     flex-basis: 100%;
@@ -419,11 +435,59 @@ a:hover {
 .status-badge--on {
   background: rgba(34, 197, 94, 0.18);
   color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.35);
 }
 
 .status-badge--off {
   background: rgba(248, 113, 113, 0.15);
   color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+/* Статусы заявок и оборудования (таблицы и карточки) */
+.status-pill {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.status-pill--request-new {
+  background: rgba(123, 150, 255, 0.22);
+  color: #c7d4ff;
+  border: 1px solid rgba(123, 150, 255, 0.38);
+}
+
+.status-pill--request-progress {
+  background: rgba(251, 191, 36, 0.16);
+  color: #fcd34d;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.status-pill--request-closed {
+  background: rgba(148, 163, 184, 0.18);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.status-pill--device-ok {
+  background: rgba(34, 197, 94, 0.18);
+  color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.status-pill--device-in-repair {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+td.status-cell {
+  vertical-align: middle;
 }
 
 .btn-compact {
@@ -616,6 +680,77 @@ a:hover {
 
 .grid-2 {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.repair-request-detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  margin-top: 4px;
+}
+
+.repair-detail-line {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.repair-detail-line__label {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.repair-detail-line__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.repair-detail-description {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.repair-detail-description .repair-detail-line__label {
+  flex: 0 0 auto;
+}
+
+.repair-detail-description .request-description-block {
+  margin: 0;
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-x: visible;
+}
+
+.admin-password-reset {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.admin-password-reset-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.admin-password-reset-actions .btn-primary,
+.admin-password-reset-actions .btn-ghost {
+  width: 100%;
+  min-height: 48px;
+  white-space: nowrap;
 }
 
 input,
@@ -885,6 +1020,61 @@ tbody tr:hover {
   font-size: 13px;
   font-weight: 500;
   color: var(--accent);
+}
+
+.admin-hub-card--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.admin-password-self {
+  margin-top: 18px;
+}
+
+.admin-password-self-form {
+  flex-wrap: wrap;
+}
+
+.qr-scan-hint {
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.repair-guest-next {
+  margin-top: 18px;
+}
+
+.repair-tracker-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.requests-toolbar {
+  margin-bottom: 16px;
+}
+
+.request-description-block {
+  white-space: pre-wrap;
+  margin-top: 8px;
+}
+
+.request-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.request-close-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .admin-page-head {

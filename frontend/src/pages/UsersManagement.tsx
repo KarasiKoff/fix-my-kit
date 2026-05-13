@@ -7,8 +7,17 @@ export function UsersManagement() {
     const [error, setError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        fetchUsers()
-            .then(setUsers)
+        fetchUsers({ limit: 100 })
+            .then((res) =>
+                setUsers(
+                    res.items.map((u) => ({
+                        id: u.id,
+                        name: u.name,
+                        login: u.login,
+                        role: u.role,
+                    })),
+                ),
+            )
             .catch((err) => setError(err instanceof Error ? err.message : 'Не удалось загрузить пользователей'));
     }, []);
 

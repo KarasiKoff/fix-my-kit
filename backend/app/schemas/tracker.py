@@ -8,3 +8,9 @@ class TrackerSyncResponse(BaseModel):
     tracker_ticket_key: str
     tracker_ticket_url: str
     last_sync_at: datetime
+
+
+class TrackerBulkSyncResponse(BaseModel):
+    attempted: int
+    synced: int
+    failed: int

@@ -3,7 +3,7 @@ export type RepairHistoryEntry = {
     deviceId: string;
     repairRequestId?: string;
     oldStatus?: 'not_in_repair' | 'in_repair';
-    newStatus: 'not_in_repair' | 'in_repair';
+    newStatus?: 'not_in_repair' | 'in_repair';
     note?: string;
     createdAt: string;
 };

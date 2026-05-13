@@ -26,6 +26,13 @@ export async function login(credentials: LoginCredentials): Promise<TokenRespons
     });
 }
 
+export async function changeOwnPassword(currentPassword: string, newPassword: string) {
+    await apiRequest<void>('/api/auth/me/password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+}
+
 export async function getCurrentUser(token: string): Promise<UserResponse> {
     return apiRequest<UserResponse>('/api/auth/me', {
         headers: {
