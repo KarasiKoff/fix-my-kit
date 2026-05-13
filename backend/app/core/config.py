@@ -37,6 +37,11 @@ class ServerConfig(BaseSettings):
         alias="PUBLIC_FRONTEND_BASE_URL",
         description="Базовый URL фронта для QR (страница заявки с deviceId).",
     )
+    cors_origins: str = Field(
+        default="",
+        alias="CORS_ORIGINS",
+        description="Разрешённые Origin для CORS, через запятую. Пусто — middleware CORS не подключается.",
+    )
 
 
 class DbConfig(BaseSettings):
