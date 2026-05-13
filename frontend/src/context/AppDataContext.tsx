@@ -1,10 +1,9 @@
-import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { fetchDevices, updateDeviceStatus } from '../api/devices';
 import { createRepairRequest as createRepairRequestApi, fetchRepairRequests } from '../api/repairRequests';
 import { Device } from '../types/device';
 import { RepairRequest } from '../types/repairRequest';
 import { RepairHistoryEntry } from '../types/repairHistory';
-import { User } from '../types/user';
 
 type NewRequestPayload = {
     deviceId: string;
@@ -14,9 +13,6 @@ type NewRequestPayload = {
 
 type AppDataContextValue = {
     devices: Device[];
-    users: User[];
-    categories: string[];
-    cabinets: string[];
     repairRequests: RepairRequest[];
     repairHistory: RepairHistoryEntry[];
     isLoading: boolean;
@@ -24,59 +20,24 @@ type AppDataContextValue = {
     refresh: () => Promise<void>;
     createRepairRequest: (payload: NewRequestPayload) => Promise<void>;
     setDeviceStatus: (deviceId: string, status: Device['status'], note?: string) => Promise<void>;
-    addDevice: (payload: Omit<Device, 'id' | 'takenBySysadmin'>) => void;
-    createUser: (payload: Omit<User, 'id'>) => void;
-    updateUser: (userId: string, payload: Partial<Omit<User, 'id'>>) => void;
-    removeUser: (userId: string) => void;
-    addCategory: (name: string) => void;
-    addCabinet: (name: string) => void;
-    removeCategory: (name: string) => void;
-    renameCategory: (oldName: string, newName: string) => void;
-    removeCabinet: (name: string) => void;
-    renameCabinet: (oldName: string, newName: string) => void;
-    updateDevice: (deviceId: string, payload: Partial<Omit<Device, 'id' | 'takenBySysadmin'>>) => void;
-    removeDevice: (deviceId: string) => void;
     getDeviceById: (id: string) => Device | undefined;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
-const initialUsers: User[] = [
-    {
-        id: 'user-1',
-        login: 'admin',
-        name: 'Администратор системы',
-        role: 'admin',
-        isActive: true,
-    },
-    {
-        id: 'user-2',
-        login: 'sysadmin',
-        name: 'Дежурный системный администратор',
-        role: 'sysadmin',
-        isActive: true,
-    },
-];
-
-const initialCategories = ['Ноутбук', 'Принтер', 'Монитор'];
-const initialCabinets = ['214', '305', '407'];
-
 export function AppDataProvider({ children }: { children: ReactNode }) {
     const [devices, setDevices] = useState<Device[]>([]);
-    const [users, setUsers] = useState<User[]>(initialUsers);
-    const [categories, setCategories] = useState<string[]>(initialCategories);
-    const [cabinets, setCabinets] = useState<string[]>(initialCabinets);
     const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
     const [repairHistory, setRepairHistory] = useState<RepairHistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const refresh = useCallback(async () => {
+    const refresh = async () => {
         setError(null);
         const [nextDevices, nextRequests] = await Promise.all([fetchDevices(), fetchRepairRequests()]);
         setDevices(nextDevices);
         setRepairRequests(nextRequests);
-    }, []);
+    };
 
     useEffect(() => {
         let active = true;
@@ -96,7 +57,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         return () => {
             active = false;
         };
-    }, [refresh]);
+    }, []);
 
     const getDeviceById = (id: string) => devices.find((item) => item.id === id);
 
@@ -149,117 +110,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ]);
     };
 
-    const addDevice = (payload: Omit<Device, 'id' | 'takenBySysadmin'>) => {
-        setDevices((current) => [
-            {
-                ...payload,
-                id: `dev-${Date.now()}`,
-                takenBySysadmin: payload.status === 'in_repair',
-            },
-            ...current,
-        ]);
-    };
-
-    const createUser = (payload: Omit<User, 'id'>) => {
-        setUsers((current) => [{ ...payload, id: `user-${Date.now()}` }, ...current]);
-    };
-
-    const updateUser = (userId: string, payload: Partial<Omit<User, 'id'>>) => {
-        setUsers((current) => current.map((user) => (user.id === userId ? { ...user, ...payload } : user)));
-    };
-
-    const removeUser = (userId: string) => {
-        setUsers((current) => current.filter((user) => user.id !== userId));
-    };
-
-    const addCategory = (name: string) => {
-        const normalized = name.trim();
-        if (!normalized) {
-            return;
-        }
-        setCategories((current) => (current.includes(normalized) ? current : [...current, normalized]));
-    };
-
-    const addCabinet = (name: string) => {
-        const normalized = name.trim();
-        if (!normalized) {
-            return;
-        }
-        setCabinets((current) => (current.includes(normalized) ? current : [...current, normalized]));
-    };
-
-    const removeCategory = (name: string) => {
-        setCategories((current) => {
-            const next = current.filter((item) => item !== name);
-            const fallback = next[0] ?? 'Прочее';
-            setDevices((devs) =>
-                devs.map((device) => (device.category === name ? { ...device, category: fallback } : device)),
-            );
-            return next.length === 0 ? ['Прочее'] : next;
-        });
-    };
-
-    const renameCategory = (oldName: string, newName: string) => {
-        const trimmed = newName.trim();
-        if (!trimmed || trimmed === oldName) {
-            return;
-        }
-        setCategories((current) => {
-            if (current.some((c) => c === trimmed && c !== oldName)) {
-                return current;
-            }
-            return current.map((c) => (c === oldName ? trimmed : c));
-        });
-        setDevices((devs) => devs.map((d) => (d.category === oldName ? { ...d, category: trimmed } : d)));
-    };
-
-    const removeCabinet = (name: string) => {
-        setCabinets((current) => {
-            const next = current.filter((item) => item !== name);
-            const fallback = next[0] ?? '—';
-            setDevices((devs) => devs.map((device) => (device.room === name ? { ...device, room: fallback } : device)));
-            return next.length === 0 ? ['—'] : next;
-        });
-    };
-
-    const renameCabinet = (oldName: string, newName: string) => {
-        const trimmed = newName.trim();
-        if (!trimmed || trimmed === oldName) {
-            return;
-        }
-        setCabinets((current) => {
-            if (current.some((c) => c === trimmed && c !== oldName)) {
-                return current;
-            }
-            return current.map((c) => (c === oldName ? trimmed : c));
-        });
-        setDevices((devs) => devs.map((d) => (d.room === oldName ? { ...d, room: trimmed } : d)));
-    };
-
-    const updateDevice = (deviceId: string, payload: Partial<Omit<Device, 'id' | 'takenBySysadmin'>>) => {
-        setDevices((current) =>
-            current.map((item) => {
-                if (item.id !== deviceId) {
-                    return item;
-                }
-                const merged = { ...item, ...payload };
-                const status = merged.status;
-                const takenBySysadmin = payload.status !== undefined ? status === 'in_repair' : item.takenBySysadmin;
-                return { ...merged, takenBySysadmin };
-            }),
-        );
-    };
-
-    const removeDevice = (deviceId: string) => {
-        setDevices((current) => current.filter((item) => item.id !== deviceId));
-    };
-
     const value = useMemo(
         () => ({
             devices,
-            users,
-            categories,
-            cabinets,
             repairRequests,
             repairHistory,
             isLoading,
@@ -267,31 +120,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             refresh,
             createRepairRequest,
             setDeviceStatus,
-            addDevice,
-            createUser,
-            updateUser,
-            removeUser,
-            addCategory,
-            addCabinet,
-            removeCategory,
-            renameCategory,
-            removeCabinet,
-            renameCabinet,
-            updateDevice,
-            removeDevice,
             getDeviceById,
         }),
-        [
-            devices,
-            users,
-            categories,
-            cabinets,
-            repairRequests,
-            repairHistory,
-            isLoading,
-            error,
-            refresh,
-        ],
+        [devices, repairRequests, repairHistory, isLoading, error],
     );
 
     return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
