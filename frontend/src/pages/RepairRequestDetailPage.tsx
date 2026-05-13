@@ -13,6 +13,7 @@ import {
 import { Device } from '../types/device';
 import { RepairRequestDetail } from '../types/repairRequest';
 import { useToast } from '../context/ToastContext';
+import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 
 function formatApiError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -137,6 +138,7 @@ export function RepairRequestDetailPage() {
     const synced = isRepairRequestSynced(request);
     const apiSt = apiStatusFromUi(request.status);
     const canAct = apiSt !== 'closed';
+    const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
 
     return (
         <main className="page page--wide page--centered">
@@ -188,12 +190,12 @@ export function RepairRequestDetailPage() {
                         <span className="repair-detail-line__label">Создана:</span>
                         <span className="repair-detail-line__value">{new Date(request.createdAt).toLocaleString('ru-RU')}</span>
                     </div>
-                    {request.ticketUrl ? (
+                    {trackerHref ? (
                         <div className="repair-detail-line">
                             <span className="repair-detail-line__label">Тикет:</span>
                             <span className="repair-detail-line__value">
-                                <a href={request.ticketUrl} target="_blank" rel="noreferrer">
-                                    {request.ticketKey ?? request.ticketUrl}
+                                <a href={trackerHref} target="_blank" rel="noreferrer">
+                                    {request.ticketKey ?? trackerHref}
                                 </a>
                             </span>
                         </div>

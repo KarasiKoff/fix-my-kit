@@ -4,6 +4,7 @@ import { useAppData } from '../context/AppDataContext';
 import { useToast } from '../context/ToastContext';
 import { ApiError } from '../api/client';
 import { isRepairRequestSynced, syncAllUnsynchronizedRepairRequests, syncRepairRequestTracker } from '../api/repairRequests';
+import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 
 function formatApiError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -76,6 +77,7 @@ export function RepairRequests() {
                                 repairRequests.map((request) => {
                                     const synced = isRepairRequestSynced(request);
                                     const canSync = !synced && request.status !== 'closed';
+                                    const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
                                     return (
                                         <tr key={request.id}>
                                             <td>{new Date(request.createdAt).toLocaleString('ru-RU')}</td>
@@ -88,8 +90,8 @@ export function RepairRequests() {
                                             <td>{request.status}</td>
                                             <td>
                                                 {synced ? (
-                                                    request.ticketUrl ? (
-                                                        <a href={request.ticketUrl} target="_blank" rel="noreferrer">
+                                                    trackerHref ? (
+                                                        <a href={trackerHref} target="_blank" rel="noreferrer">
                                                             {request.ticketKey ?? 'открыть'}
                                                         </a>
                                                     ) : (

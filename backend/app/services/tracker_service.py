@@ -53,9 +53,11 @@ def _tracker_headers(
 def _parse_issue_response(body: dict) -> TrackerIssueResult:
     ticket_id = str(body.get("id") or "")
     ticket_key = str(body.get("key") or "")
-    ticket_url = str(body.get("self") or "")
-    if ticket_key and not ticket_url:
+    # В ответе API поле self — URL вида api.tracker.yandex.net/.../issues/KEY; для UI нужна ссылка на веб-Трекер.
+    if ticket_key:
         ticket_url = f"https://tracker.yandex.ru/{ticket_key}"
+    else:
+        ticket_url = str(body.get("self") or "")
     if not ticket_id or not ticket_key or not ticket_url:
         raise TrackerUnavailableError("tracker_response_missing_fields")
     return TrackerIssueResult(
