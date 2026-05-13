@@ -31,7 +31,7 @@ export function DeviceDetail() {
                     <p><strong>Инвентарный номер:</strong> {device.inventoryNumber}</p>
                     <p><strong>Категория:</strong> {device.category}</p>
                     <p><strong>Серийный номер:</strong> {device.serialNumber}</p>
-                    <p><strong>Аудитория:</strong> {device.audienceName}</p>
+                    <p><strong>Кабинет:</strong> {device.room}</p>
                     <p><strong>Ответственный:</strong> {device.responsible}</p>
                     <p><strong>Забрал сисадмин:</strong> {device.takenBySysadmin ? 'Да' : 'Нет'}</p>
                 </div>

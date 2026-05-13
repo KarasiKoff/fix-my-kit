@@ -7,7 +7,7 @@ export function DevicesList() {
     const [filters, setFilters] = React.useState({
         inventoryNumber: '',
         category: '',
-        audience: '',
+        room: '',
         responsible: '',
         status: '',
     });
@@ -15,10 +15,10 @@ export function DevicesList() {
     const filteredDevices = devices.filter((device) => {
         const byInventory = device.inventoryNumber.toLowerCase().includes(filters.inventoryNumber.toLowerCase());
         const byCategory = device.category.toLowerCase().includes(filters.category.toLowerCase());
-        const byAudience = device.audienceName.toLowerCase().includes(filters.audience.toLowerCase());
+        const byRoom = device.room.toLowerCase().includes(filters.room.toLowerCase());
         const byResponsible = device.responsible.toLowerCase().includes(filters.responsible.toLowerCase());
         const byStatus = filters.status === '' || device.status === filters.status;
-        return byInventory && byCategory && byAudience && byResponsible && byStatus;
+        return byInventory && byCategory && byRoom && byResponsible && byStatus;
     });
 
     return (
@@ -40,9 +40,9 @@ export function DevicesList() {
                         onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))}
                     />
                     <input
-                        placeholder="Аудитория"
-                        value={filters.audience}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, audience: event.target.value }))}
+                        placeholder="Кабинет"
+                        value={filters.room}
+                        onChange={(event) => setFilters((prev) => ({ ...prev, room: event.target.value }))}
                     />
                     <input
                         placeholder="Ответственный"
@@ -69,7 +69,7 @@ export function DevicesList() {
                                 <th>Инв. номер</th>
                                 <th>Название</th>
                                 <th>Категория</th>
-                                <th>Аудитория</th>
+                                <th>Кабинет</th>
                                 <th>Ответственный</th>
                                 <th>Статус</th>
                                 <th>Карточка</th>
@@ -81,7 +81,7 @@ export function DevicesList() {
                                     <td>{device.inventoryNumber}</td>
                                     <td>{device.name}</td>
                                     <td>{device.category}</td>
-                                    <td>{device.audienceName}</td>
+                                    <td>{device.room}</td>
                                     <td>{device.responsible}</td>
                                     <td>{device.status}</td>
                                     <td>

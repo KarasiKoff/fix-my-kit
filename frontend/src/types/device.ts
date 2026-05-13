@@ -4,8 +4,7 @@ export type Device = {
     name: string;
     category: string;
     serialNumber: string;
-    audienceId?: number | null;
-    audienceName: string;
+    room: string;
     responsible: string;
     status: 'not_in_repair' | 'in_repair';
     takenBySysadmin: boolean;
