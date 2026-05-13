@@ -71,7 +71,6 @@ function AppShell() {
                                 <NavLink to="/scan">QR</NavLink>
                                 <NavLink to="/repair">Заявка</NavLink>
                                 <NavLink to="/requests">Все заявки</NavLink>
-                                <NavLink to="/users">Пользователи</NavLink>
                                 <NavLink to="/admin">Админка</NavLink>
                                 <button type="button" className="nav-button" onClick={signOut}>
                                     Выйти
