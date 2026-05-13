@@ -25,6 +25,12 @@ type AppDataContextValue = {
     removeUser: (userId: string) => void;
     addCategory: (name: string) => void;
     addCabinet: (name: string) => void;
+    removeCategory: (name: string) => void;
+    renameCategory: (oldName: string, newName: string) => void;
+    removeCabinet: (name: string) => void;
+    renameCabinet: (oldName: string, newName: string) => void;
+    updateDevice: (deviceId: string, payload: Partial<Omit<Device, 'id' | 'takenBySysadmin'>>) => void;
+    removeDevice: (deviceId: string) => void;
     getDeviceById: (id: string) => Device | undefined;
 };
 
@@ -68,7 +74,6 @@ const initialUsers: User[] = [
         id: 'user-1',
         login: 'admin',
         fullName: 'Администратор системы',
-        email: 'admin@fixmykit.local',
         role: 'admin',
         isActive: true,
     },
@@ -76,7 +81,6 @@ const initialUsers: User[] = [
         id: 'user-2',
         login: 'sysadmin',
         fullName: 'Дежурный системный администратор',
-        email: 'sysadmin@fixmykit.local',
         role: 'sysadmin',
         isActive: true,
     },
@@ -214,6 +218,72 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setCabinets((current) => (current.includes(normalized) ? current : [...current, normalized]));
     };
 
+    const removeCategory = (name: string) => {
+        setCategories((current) => {
+            const next = current.filter((item) => item !== name);
+            const fallback = next[0] ?? 'Прочее';
+            setDevices((devs) =>
+                devs.map((device) => (device.category === name ? { ...device, category: fallback } : device)),
+            );
+            return next.length === 0 ? ['Прочее'] : next;
+        });
+    };
+
+    const renameCategory = (oldName: string, newName: string) => {
+        const trimmed = newName.trim();
+        if (!trimmed || trimmed === oldName) {
+            return;
+        }
+        setCategories((current) => {
+            if (current.some((c) => c === trimmed && c !== oldName)) {
+                return current;
+            }
+            return current.map((c) => (c === oldName ? trimmed : c));
+        });
+        setDevices((devs) => devs.map((d) => (d.category === oldName ? { ...d, category: trimmed } : d)));
+    };
+
+    const removeCabinet = (name: string) => {
+        setCabinets((current) => {
+            const next = current.filter((item) => item !== name);
+            const fallback = next[0] ?? '—';
+            setDevices((devs) => devs.map((device) => (device.room === name ? { ...device, room: fallback } : device)));
+            return next.length === 0 ? ['—'] : next;
+        });
+    };
+
+    const renameCabinet = (oldName: string, newName: string) => {
+        const trimmed = newName.trim();
+        if (!trimmed || trimmed === oldName) {
+            return;
+        }
+        setCabinets((current) => {
+            if (current.some((c) => c === trimmed && c !== oldName)) {
+                return current;
+            }
+            return current.map((c) => (c === oldName ? trimmed : c));
+        });
+        setDevices((devs) => devs.map((d) => (d.room === oldName ? { ...d, room: trimmed } : d)));
+    };
+
+    const updateDevice = (deviceId: string, payload: Partial<Omit<Device, 'id' | 'takenBySysadmin'>>) => {
+        setDevices((current) =>
+            current.map((item) => {
+                if (item.id !== deviceId) {
+                    return item;
+                }
+                const merged = { ...item, ...payload };
+                const status = merged.status;
+                const takenBySysadmin = payload.status !== undefined ? status === 'in_repair' : item.takenBySysadmin;
+                return { ...merged, takenBySysadmin };
+            }),
+        );
+    };
+
+    const removeDevice = (deviceId: string) => {
+        setDevices((current) => current.filter((item) => item.id !== deviceId));
+    };
+
     const value = useMemo(
         () => ({
             devices,
@@ -230,6 +300,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             removeUser,
             addCategory,
             addCabinet,
+            removeCategory,
+            renameCategory,
+            removeCabinet,
+            renameCabinet,
+            updateDevice,
+            removeDevice,
             getDeviceById,
         }),
         [devices, users, categories, cabinets, repairRequests, repairHistory],

@@ -18,8 +18,8 @@ export function AdminAddDevice() {
     }
 
     return (
-        <main className="page">
-            <h2>Добавление устройства</h2>
+        <>
+            <h2 className="admin-section-title">Добавление устройства</h2>
             <section className="card">
                 <form
                     className="request-form"
@@ -92,10 +92,10 @@ export function AdminAddDevice() {
             </section>
             <section className="card">
                 <div className="actions-row">
-                    <Link to="/admin">Вернуться в админ-панель</Link>
+                    <Link to="/admin/devices">К списку устройств</Link>
                     <Link to="/devices">Открыть список оборудования</Link>
                 </div>
             </section>
-        </main>
+        </>
     );
 }
