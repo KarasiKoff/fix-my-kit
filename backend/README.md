@@ -19,10 +19,12 @@
 docker compose up --build
 ```
 
-Используется **один** корневой `Dockerfile` с target-стадиями:
+Используется корневой **`Dockerfile`** (dev) с target-стадиями:
 
 - `backend` — Python/FastAPI
 - `frontend` — Node/Vite
+
+Продакшен-сборка: **`Dockerfile.prod`** и `docker-compose.prod.yml` (стадии `backend`, `frontend-prod`).
 
 ## Проверка
 

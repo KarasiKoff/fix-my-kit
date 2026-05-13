@@ -36,7 +36,19 @@
 - **ORM и миграции:** SQLAlchemy + Alembic
 - **Авторизация:** JWT (для внутренних пользователей)
 - **Интеграция заявок:** Яндекс Трекер API
-- **Инфраструктура:** Docker Compose
+- **Инфраструктура:** Docker Compose (`docker-compose.yml` + **`Dockerfile`** — разработка; `docker-compose.prod.yml` + **`Dockerfile.prod`** — прод: Postgres без порта наружу, статический фронт в nginx, бэкенд на `127.0.0.1:8001`, фронт на `127.0.0.1:8080`). Черновик хостового nginx: `deploy/nginx-fixmykit.example.conf`. Пример переменных: `.env.production.example`.
+
+---
+
+## Продакшен
+
+1. Скопируйте `.env.production.example` → `.env.production`, заполните секреты; задайте `CORS_ORIGINS` (URL фронта) и `VITE_API_BASE_URL` (URL API).
+2. Сборка и запуск: `docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build`.
+3. На хосте настройте nginx по примеру `deploy/nginx-fixmykit.example.conf` (два `server_name`, прокси на `127.0.0.1:8080` и `:8001`).
+
+Бэкенд: если `CORS_ORIGINS` не пустой, включается `CORSMiddleware` с перечисленными origin (без cookies, `Authorization` разрешён через `allow_headers=["*"]`).
+
+Фронт: при сборке в образ подставляется `VITE_API_BASE_URL`; в рантайме запросы идут на этот хост. Если переменная пустая — по-прежнему относительные пути `/api/...`.
 
 ---
 

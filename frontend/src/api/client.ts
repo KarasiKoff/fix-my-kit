@@ -13,6 +13,22 @@ export class ApiError extends Error {
 
 export type ApiRequestOptions = RequestInit & { skipAuth?: boolean };
 
+function apiBaseUrl(): string {
+    const raw = import.meta.env.VITE_API_BASE_URL;
+    if (raw === undefined || raw === null || String(raw).trim() === "") {
+        return "";
+    }
+    return String(raw).replace(/\/+$/, "");
+}
+
+function resolveApiUrl(path: string): string {
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+        return path;
+    }
+    const base = apiBaseUrl();
+    return base === "" ? path : `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 export async function apiRequest<T>(path: string, init: ApiRequestOptions = {}): Promise<T> {
     const { skipAuth, ...rest } = init;
     const method = (rest.method ?? 'GET').toUpperCase();
@@ -29,7 +45,7 @@ export async function apiRequest<T>(path: string, init: ApiRequestOptions = {}):
         }
     }
 
-    const response = await fetch(path, {
+    const response = await fetch(resolveApiUrl(path), {
         ...rest,
         method,
         headers,
