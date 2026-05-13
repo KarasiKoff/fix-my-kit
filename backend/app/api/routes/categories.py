@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
+from backend.app.models.device import Device as DeviceModel
 from backend.app.models.category import Category as CategoryModel
 from backend.app.models.enums import UserRole
 from backend.app.models.user import User
@@ -74,3 +75,21 @@ def update_category(
     db.commit()
     db.refresh(category)
     return category
+
+
+@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_category(
+    category_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_roles({UserRole.ADMIN})),
+) -> None:
+    category = db.query(CategoryModel).filter(CategoryModel.id == category_id).first()
+    if category is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="category_not_found")
+
+    db.query(DeviceModel).filter(DeviceModel.category_id == category_id).update(
+        {DeviceModel.category_id: None},
+        synchronize_session=False,
+    )
+    db.delete(category)
+    db.commit()

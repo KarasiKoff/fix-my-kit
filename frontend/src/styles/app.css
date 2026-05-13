@@ -72,6 +72,12 @@ a:hover {
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
+.toast--error {
+  background: #ef4444;
+  color: #fff7f7;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
 .topbar {
   display: flex;
   justify-content: stretch;
@@ -885,6 +891,61 @@ tbody tr:hover {
   font-size: 13px;
   font-weight: 500;
   color: var(--accent);
+}
+
+.admin-hub-card--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.admin-password-self {
+  margin-top: 18px;
+}
+
+.admin-password-self-form {
+  flex-wrap: wrap;
+}
+
+.qr-scan-hint {
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.repair-guest-next {
+  margin-top: 18px;
+}
+
+.repair-tracker-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.requests-toolbar {
+  margin-bottom: 16px;
+}
+
+.request-description-block {
+  white-space: pre-wrap;
+  margin-top: 8px;
+}
+
+.request-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.request-close-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .admin-page-head {

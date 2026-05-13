@@ -1,20 +1,20 @@
-import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { fetchDevices, updateDeviceStatus } from '../api/devices';
 import { createRepairRequest as createRepairRequestApi, fetchRepairRequests } from '../api/repairRequests';
 import { Device } from '../types/device';
 import { RepairRequest } from '../types/repairRequest';
-import { RepairHistoryEntry } from '../types/repairHistory';
 
 type NewRequestPayload = {
     deviceId: string;
     requesterName: string;
     description: string;
+    syncToTracker?: boolean;
 };
 
 type AppDataContextValue = {
     devices: Device[];
     repairRequests: RepairRequest[];
-    repairHistory: RepairHistoryEntry[];
     isLoading: boolean;
     error: string | null;
     refresh: () => Promise<void>;
@@ -26,22 +26,30 @@ type AppDataContextValue = {
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
+    const { isAuthenticated } = useAuth();
     const [devices, setDevices] = useState<Device[]>([]);
     const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
-    const [repairHistory, setRepairHistory] = useState<RepairHistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const refresh = async () => {
+    const refresh = useCallback(async () => {
         setError(null);
         const [nextDevices, nextRequests] = await Promise.all([fetchDevices(), fetchRepairRequests()]);
         setDevices(nextDevices);
         setRepairRequests(nextRequests);
-    };
+    }, []);
 
     useEffect(() => {
-        let active = true;
+        if (!isAuthenticated) {
+            setDevices([]);
+            setRepairRequests([]);
+            setError(null);
+            setIsLoading(false);
+            return;
+        }
 
+        let active = true;
+        setIsLoading(true);
         refresh()
             .catch((err) => {
                 if (active) {
@@ -57,64 +65,37 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         return () => {
             active = false;
         };
-    }, []);
+    }, [isAuthenticated, refresh]);
 
-    const getDeviceById = (id: string) => devices.find((item) => item.id === id);
+    const getDeviceById = useCallback((id: string) => devices.find((item) => item.id === id), [devices]);
 
-    const setDeviceStatus = async (deviceId: string, status: Device['status'], note?: string) => {
-        const prev = getDeviceById(deviceId);
-        if (!prev || prev.status === status) {
-            return;
-        }
-        const updated = await updateDeviceStatus(deviceId, status);
-        setDevices((current) => current.map((item) => (item.id === deviceId ? updated : item)));
-        setRepairHistory((current) => [
-            {
-                id: `hist-${Date.now()}`,
-                deviceId,
-                oldStatus: prev.status,
-                newStatus: status,
-                note,
-                createdAt: new Date().toISOString(),
-            },
-            ...current,
-        ]);
-    };
+    const setDeviceStatus = useCallback(
+        async (deviceId: string, status: Device['status'], _note?: string) => {
+            const prev = devices.find((item) => item.id === deviceId);
+            if (!prev || prev.status === status) {
+                return;
+            }
+            const updated = await updateDeviceStatus(deviceId, status);
+            setDevices((current) => current.map((item) => (item.id === deviceId ? updated : item)));
+            void _note;
+        },
+        [devices],
+    );
 
-    const createRepairRequest = async (payload: NewRequestPayload) => {
-        const newRequest = await createRepairRequestApi(payload);
-
-        setRepairRequests((current) => [newRequest, ...current]);
-        setDevices((current) =>
-            current.map((device) =>
-                device.id === payload.deviceId
-                    ? {
-                          ...device,
-                          status: 'in_repair',
-                          takenBySysadmin: true,
-                      }
-                    : device,
-            ),
-        );
-        setRepairHistory((current) => [
-            {
-                id: `hist-${Date.now()}-request`,
-                deviceId: payload.deviceId,
-                repairRequestId: newRequest.id,
-                oldStatus: 'not_in_repair',
-                newStatus: 'in_repair',
-                note: `Создана заявка ${newRequest.ticketKey ?? newRequest.id}.`,
-                createdAt: new Date().toISOString(),
-            },
-            ...current,
-        ]);
-    };
+    const createRepairRequest = useCallback(async (payload: NewRequestPayload) => {
+        await createRepairRequestApi({
+            deviceId: payload.deviceId,
+            requesterName: payload.requesterName,
+            description: payload.description,
+            syncToTracker: payload.syncToTracker,
+        });
+        await refresh();
+    }, [refresh]);
 
     const value = useMemo(
         () => ({
             devices,
             repairRequests,
-            repairHistory,
             isLoading,
             error,
             refresh,
@@ -122,7 +103,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             setDeviceStatus,
             getDeviceById,
         }),
-        [devices, repairRequests, repairHistory, isLoading, error],
+        [devices, repairRequests, isLoading, error, refresh, createRepairRequest, setDeviceStatus, getDeviceById],
     );
 
     return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

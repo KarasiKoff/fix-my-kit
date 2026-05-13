@@ -9,6 +9,10 @@ class AudienceCreate(BaseModel):
     name: str
 
 
+class AudienceUpdate(BaseModel):
+    name: str | None = None
+
+
 class Audience(AudienceBase):
     model_config = ConfigDict(from_attributes=True)
 

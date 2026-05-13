@@ -32,6 +32,11 @@ class ServerConfig(BaseSettings):
     tracker_org_id: str | None = Field(default=None, alias="TRACKER_ORG_ID")
     tracker_queue: str | None = Field(default=None, alias="TRACKER_QUEUE")
     tracker_timeout_seconds: int = Field(default=15, alias="TRACKER_TIMEOUT_SECONDS")
+    public_frontend_base_url: str = Field(
+        default="https://fixmykit.local",
+        alias="PUBLIC_FRONTEND_BASE_URL",
+        description="Базовый URL фронта для QR (страница заявки с deviceId).",
+    )
 
 
 class DbConfig(BaseSettings):

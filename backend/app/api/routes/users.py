@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_current_admin, get_db
+from backend.app.api.deps import get_current_admin, get_db, require_admin_or_sysadmin
 from backend.app.core.security import hash_password
 from backend.app.models.user import User
 from backend.app.schemas.user import (
@@ -26,7 +26,7 @@ def get_users(
     limit: int = Query(10, ge=1, le=100, description="Limit number of results"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin),
+    _: User = Depends(require_admin_or_sysadmin),
 ) -> UserListResponse:
     query = db.query(User)
 
@@ -96,19 +96,18 @@ def update_user(
 
 
 @router.patch("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
-def update_user_password(
+def admin_reset_user_password(
     user_id: UUID,
     password_data: UserPasswordUpdate,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin),
-):
+    _: User = Depends(get_current_admin),
+) -> None:
+    """Сброс пароля пользователя администратором (без знания старого пароля)."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="user_not_found"
         )
 
-    # Assuming password validation is done in schema, but for weak_password, perhaps add check
-    # For now, just update
     user.password_hash = hash_password(password_data.password)
     db.commit()

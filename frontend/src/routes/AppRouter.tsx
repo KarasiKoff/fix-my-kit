@@ -5,6 +5,7 @@ import { DevicesList } from '../pages/DevicesList';
 import { DeviceDetail } from '../pages/DeviceDetail';
 import { NewRepairRequest } from '../pages/NewRepairRequest';
 import { RepairRequests } from '../pages/RepairRequests';
+import { RepairRequestDetailPage } from '../pages/RepairRequestDetailPage';
 import { UsersManagement } from '../pages/UsersManagement';
 import { QRScan } from '../pages/QRScan';
 import { AdminHub } from '../pages/admin/AdminHub';
@@ -90,6 +91,7 @@ function AppShell() {
                 <Route path="/devices/:id" element={<RequireAuth><DeviceDetail /></RequireAuth>} />
                 <Route path="/repair" element={<NewRepairRequest />} />
                 <Route path="/requests" element={<RequireAuth><RepairRequests /></RequireAuth>} />
+                <Route path="/requests/:id" element={<RequireAuth><RepairRequestDetailPage /></RequireAuth>} />
                 <Route path="/users" element={<RequireAuth><UsersManagement /></RequireAuth>} />
                 <Route path="/admin" element={<RequireAuth><AdminHub /></RequireAuth>} />
                 <Route path="/admin/users" element={<RequireAuth><AdminUsersPage /></RequireAuth>} />

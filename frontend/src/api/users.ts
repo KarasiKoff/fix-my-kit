@@ -1,23 +1,82 @@
 import { apiRequest } from './client';
-import { User } from '../types/user';
+
+export type UserListItem = {
+    id: string;
+    login: string;
+    name: string;
+    role: 'admin' | 'sysadmin';
+    isActive: boolean;
+    createdAt: string;
+};
 
 type UserApi = {
     id: string;
     login: string;
     full_name?: string | null;
-    role: User['role'];
+    role: 'admin' | 'sysadmin';
+    is_active: boolean;
+    created_at: string;
 };
 
-function mapUser(item: UserApi): User {
+function mapUser(item: UserApi): UserListItem {
     return {
         id: item.id,
-        name: item.full_name ?? item.login,
         login: item.login,
+        name: item.full_name ?? item.login,
         role: item.role,
+        isActive: item.is_active,
+        createdAt: item.created_at,
     };
 }
 
-export async function fetchUsers() {
-    const response = await apiRequest<{ items: UserApi[]; total: number }>('/api/users');
-    return response.items.map(mapUser);
+export async function fetchUsers(params?: { search?: string; limit?: number; offset?: number }) {
+    const sp = new URLSearchParams();
+    if (params?.search) {
+        sp.set('search', params.search);
+    }
+    if (params?.limit != null) {
+        sp.set('limit', String(params.limit));
+    }
+    if (params?.offset != null) {
+        sp.set('offset', String(params.offset));
+    }
+    const q = sp.toString();
+    const response = await apiRequest<{ items: UserApi[]; total: number }>(`/api/users${q ? `?${q}` : ''}`);
+    return { items: response.items.map(mapUser), total: response.total };
+}
+
+export async function createUser(payload: {
+    login: string;
+    password: string;
+    role: 'admin' | 'sysadmin';
+    full_name?: string | null;
+}) {
+    const item = await apiRequest<UserApi>('/api/users', {
+        method: 'POST',
+        body: JSON.stringify({
+            login: payload.login,
+            password: payload.password,
+            role: payload.role,
+            full_name: payload.full_name ?? null,
+        }),
+    });
+    return mapUser(item);
+}
+
+export async function updateUser(
+    id: string,
+    payload: { role?: 'admin' | 'sysadmin'; full_name?: string | null; is_active?: boolean },
+) {
+    const item = await apiRequest<UserApi>(`/api/users/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+    });
+    return mapUser(item);
+}
+
+export async function adminResetUserPassword(userId: string, newPassword: string) {
+    await apiRequest<void>(`/api/users/${userId}/password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ password: newPassword }),
+    });
 }
