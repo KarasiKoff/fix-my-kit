@@ -1,16 +1,19 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from backend.app.api.router import api_router
 from backend.app.core.config import settings
-from backend.app.services.admin_bootstrap import ensure_admin_user
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+
+from backend.app.api.router import api_router 
+from backend.app.services.admin_bootstrap import ensure_admin_user 
+from backend.app.services.tracker_webhook_bootstrap import ensure_tracker_webhook_actor  
+from fastapi import FastAPI 
+from fastapi.middleware.cors import CORSMiddleware 
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     ensure_admin_user()
+    ensure_tracker_webhook_actor()
     yield
 
 

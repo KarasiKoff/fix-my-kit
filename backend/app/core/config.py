@@ -20,7 +20,9 @@ class ServerConfig(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     jwt_secret_key: str = Field(default="change_me_secret", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
-    access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    access_token_expire_minutes: int = Field(
+        default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
     admin_login: str | None = Field(default=None, alias="ADMIN_LOGIN")
     admin_password: str | None = Field(default=None, alias="ADMIN_PASSWORD")
 
@@ -32,6 +34,16 @@ class ServerConfig(BaseSettings):
     tracker_org_id: str | None = Field(default=None, alias="TRACKER_ORG_ID")
     tracker_queue: str | None = Field(default=None, alias="TRACKER_QUEUE")
     tracker_timeout_seconds: int = Field(default=15, alias="TRACKER_TIMEOUT_SECONDS")
+    tracker_webhook_secret: str | None = Field(
+        default=None,
+        alias="TRACKER_WEBHOOK_SECRET",
+        description="Секрет для POST /api/webhooks/yandex-tracker (заголовок X-Tracker-Webhook-Secret).",
+    )
+    tracker_webhook_actor_login: str = Field(
+        default="tracker_webhook",
+        alias="TRACKER_WEBHOOK_ACTOR_LOGIN",
+        description="Логин технического пользователя",
+    )
     public_frontend_base_url: str = Field(
         default="https://fixmykit.local",
         alias="PUBLIC_FRONTEND_BASE_URL",

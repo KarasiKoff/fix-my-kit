@@ -23,6 +23,7 @@ from backend.app.schemas.repair_request import (
 )
 from backend.app.schemas.tracker import TrackerSyncResponse, TrackerBulkSyncResponse
 from backend.app.services.repair_history_service import add_repair_history
+from backend.app.services.repair_request_closure_service import record_repair_request_closed
 from backend.app.services.tracker_service import TrackerUnavailableError, sync_repair_request_to_tracker
 
 router = APIRouter(prefix="/api", tags=["repair-requests"])
@@ -61,14 +62,6 @@ def ensure_no_active_request(db: Session, device_id: UUID) -> None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="active_request_exists")
 
 
-def apply_closed_fields(repair_request: RepairRequest, current_user: User, resolution_note: str | None = None) -> None:
-    repair_request.status = RequestStatus.CLOSED
-    repair_request.closed_at = datetime.now(timezone.utc)
-    repair_request.closed_by_user_id = current_user.id
-    if resolution_note is not None:
-        repair_request.resolution_note = resolution_note
-
-
 def _try_tracker_sync(db: Session, request_id: UUID) -> bool:
     """Пытается создать/подтянуть задачу в Трекере. При ошибке не бросает исключение наружу."""
     repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
@@ -82,22 +75,6 @@ def _try_tracker_sync(db: Session, request_id: UUID) -> bool:
     repair_request.last_sync_at = result.synced_at
     db.commit()
     return True
-
-
-def _record_request_closed(db: Session, repair_request: RepairRequest, current_user: User, resolution_note: str | None) -> None:
-    device = db.query(Device).filter(Device.id == repair_request.device_id).first()
-    old_rs = device.repair_status if device else None
-    apply_closed_fields(repair_request, current_user, resolution_note)
-    if device is not None:
-        device.repair_status = RepairStatus.NOT_IN_REPAIR
-        add_repair_history(
-            db,
-            device_id=device.id,
-            repair_request_id=repair_request.id,
-            old_status=old_rs,
-            new_status=RepairStatus.NOT_IN_REPAIR,
-            note="Заявка закрыта",
-        )
 
 
 def _record_request_created(db: Session, repair_request: RepairRequest) -> None:
@@ -252,7 +229,7 @@ def update_repair_request_status(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="invalid_status_transition")
 
     if payload.status == RequestStatus.CLOSED:
-        _record_request_closed(db, repair_request, current_user, payload.resolution_note)
+        record_repair_request_closed(db, repair_request, current_user, payload.resolution_note)
     else:
         repair_request.status = payload.status
         if payload.resolution_note is not None:
@@ -307,7 +284,7 @@ def close_repair_request(
     if RequestStatus.CLOSED not in ALLOWED_STATUS_TRANSITIONS[repair_request.status]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="invalid_status_transition")
 
-    _record_request_closed(db, repair_request, current_user, payload.resolution_note)
+    record_repair_request_closed(db, repair_request, current_user, payload.resolution_note)
     db.commit()
     db.refresh(repair_request)
     return RepairRequestDetail.model_validate(repair_request)
