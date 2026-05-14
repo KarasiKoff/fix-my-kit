@@ -1,9 +1,13 @@
 /**
  * Ссылка на публичную страницу заявки с предвыбранным устройством (по UUID).
  */
-export function buildRepairRequestUrl(deviceId: string): string {
+export function buildRepairRequestUrl(deviceId: string, inventoryNumber?: string): string {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${origin}/repair?deviceId=${encodeURIComponent(deviceId)}`;
+    const params = new URLSearchParams({ deviceId });
+    if (inventoryNumber) {
+        params.set('inventoryNumber', inventoryNumber);
+    }
+    return `${origin}/repair?${params.toString()}`;
 }
 
 /** Имя файла для PNG: без символов, недопустимых в Windows / Unix. */
