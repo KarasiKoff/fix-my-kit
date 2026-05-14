@@ -1,12 +1,26 @@
+import logging
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from backend.app.api.router import api_router
 from backend.app.core.config import settings
-from backend.app.services.admin_bootstrap import ensure_admin_user
-from backend.app.services.tracker_webhook_bootstrap import ensure_tracker_webhook_actor
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+
+# До импорта роутов: чтобы logger в handlers (webhooks и т.д.) писал в консоль Docker.
+_log = logging.getLogger("backend")
+if not _log.handlers:
+    _lvl = getattr(logging, (settings.log_level or "INFO").upper(), logging.INFO)
+    _log.setLevel(_lvl)
+    _h = logging.StreamHandler(sys.stderr)
+    _h.setLevel(_lvl)
+    _h.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+    _log.addHandler(_h)
+    _log.propagate = False
+
+from backend.app.api.router import api_router  # noqa: E402
+from backend.app.services.admin_bootstrap import ensure_admin_user  # noqa: E402
+from backend.app.services.tracker_webhook_bootstrap import ensure_tracker_webhook_actor  # noqa: E402
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 
 @asynccontextmanager
