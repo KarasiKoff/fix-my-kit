@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
+import { QrSheetSettingsModal } from '../components/QrSheetSettingsModal';
 import { deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 
 export function DevicesList() {
     const navigate = useNavigate();
     const { devices, isLoading, error } = useAppData();
-    const [filters, setFilters] = React.useState({
+    const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
+    const [sheetModalOpen, setSheetModalOpen] = useState(false);
+    const [filters, setFilters] = useState({
         inventoryNumber: '',
         category: '',
         room: '',
@@ -22,6 +25,29 @@ export function DevicesList() {
         const byStatus = filters.status === '' || device.status === filters.status;
         return byInventory && byCategory && byRoom && byResponsible && byStatus;
     });
+
+    const selectedDevicesList = useMemo(
+        () => filteredDevices.filter((d) => selectedDevices.has(d.id)),
+        [filteredDevices, selectedDevices],
+    );
+
+    const handleSelectAll = () => {
+        if (selectedDevices.size === filteredDevices.length) {
+            setSelectedDevices(new Set());
+        } else {
+            setSelectedDevices(new Set(filteredDevices.map((d) => d.id)));
+        }
+    };
+
+    const handleSelectDevice = (id: string) => {
+        const newSelected = new Set(selectedDevices);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedDevices(newSelected);
+    };
 
     function openDevice(id: string) {
         navigate(`/devices/${id}`);
@@ -66,12 +92,30 @@ export function DevicesList() {
                 </div>
             </section>
 
+            {selectedDevices.size > 0 && (
+                <section className="card">
+                    <h3>Действия с выбранными ({selectedDevices.size})</h3>
+                    <div className="actions-row">
+                        <button type="button" onClick={() => setSheetModalOpen(true)}>
+                            Настройка и предпросмотр
+                        </button>
+                    </div>
+                </section>
+            )}
+
             <section className="card">
                 <h3>Оборудование ({filteredDevices.length})</h3>
                 <div className="table-wrap">
                     <table className="requests-table">
                         <thead>
                             <tr>
+                                <th className="table-col-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedDevices.size === filteredDevices.length && filteredDevices.length > 0}
+                                        onChange={handleSelectAll}
+                                    />
+                                </th>
                                 <th className="table-col-center">Инв. номер</th>
                                 <th className="table-col-center">Название</th>
                                 <th className="table-col-center">Категория</th>
@@ -95,6 +139,16 @@ export function DevicesList() {
                                         }
                                     }}
                                 >
+                                    <td
+                                        className="table-col-center"
+                                        onClick={(event) => event.stopPropagation()}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedDevices.has(device.id)}
+                                            onChange={() => handleSelectDevice(device.id)}
+                                        />
+                                    </td>
                                     <td className="table-col-center">{device.inventoryNumber}</td>
                                     <td className="table-col-center">{device.name}</td>
                                     <td className="table-col-center">{device.category}</td>
@@ -117,6 +171,12 @@ export function DevicesList() {
                     </table>
                 </div>
             </section>
+
+            <QrSheetSettingsModal
+                open={sheetModalOpen}
+                onClose={() => setSheetModalOpen(false)}
+                devices={selectedDevicesList}
+            />
         </main>
     );
 }
