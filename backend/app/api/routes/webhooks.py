@@ -48,8 +48,12 @@ WEBHOOK_ALLOWED: dict[RequestStatus, set[RequestStatus]] = {
     },
 }
 
-# Строка как приходит из Трекера (после strip). Пока пусто — дополняйте по логам / ответу 400.
-TRACKER_STATUS_ALIASES: dict[str, RequestStatus] = {}
+TRACKER_STATUS_ALIASES: dict[str, RequestStatus] = {
+    "Открыт": RequestStatus.OPEN,
+    "В работе": RequestStatus.IN_PROGRESS,
+    "Требуется информация": RequestStatus.IN_PROGRESS,
+    "Закрыт": RequestStatus.CLOSED,
+}
 
 
 def _map_tracker_status_to_request(raw: str) -> RequestStatus | None:
