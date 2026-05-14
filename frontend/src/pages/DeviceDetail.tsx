@@ -5,7 +5,6 @@ import { fetchDeviceById, fetchDeviceHistory, updateDeviceStatus } from '../api/
 import { Device } from '../types/device';
 import { RepairHistoryEntry } from '../types/repairHistory';
 import { useToast } from '../context/ToastContext';
-import { RepairQrModal } from '../components/RepairQrModal';
 import { deviceHistoryStatusLabel, deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 
 function formatApiError(err: unknown): string {
@@ -31,7 +30,6 @@ export function DeviceDetail() {
     const [device, setDevice] = useState<Device | null>(null);
     const [history, setHistory] = useState<RepairHistoryEntry[]>([]);
     const [loading, setLoading] = useState(true);
-    const [qrOpen, setQrOpen] = useState(false);
 
     const reload = useCallback(async () => {
         if (!id) {
@@ -121,14 +119,9 @@ export function DeviceDetail() {
                     <button type="button" onClick={() => void handleStatusChange('not_in_repair', '')}>
                         Перевести в «Исправно»
                     </button>
-                    <button type="button" onClick={() => setQrOpen(true)}>
-                        QR заявки
-                    </button>
                     <Link to={`/repair?deviceId=${device.id}`}>Создать заявку</Link>
                 </div>
             </section>
-
-            <RepairQrModal open={qrOpen} device={device} onClose={() => setQrOpen(false)} />
 
             <section className="card">
                 <h3>История ремонтов</h3>
