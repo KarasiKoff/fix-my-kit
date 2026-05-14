@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, NavLink, Navigate, Route, Routes, Link } from 'react-router-dom';
 import { Login } from '../pages/Login';
 import { DevicesList } from '../pages/DevicesList';
 import { DeviceDetail } from '../pages/DeviceDetail';
@@ -15,6 +15,7 @@ import { AdminAddRoom } from '../pages/admin/AdminAddRoom';
 import { AdminAddDevice } from '../pages/admin/AdminAddDevice';
 import { useAuth } from '../hooks/useAuth';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { UserAccountMenu } from '../components/UserAccountMenu';
 import { ToastProvider } from '../context/ToastContext';
 import { RouteDocumentTitle } from '../components/RouteDocumentTitle';
 
@@ -55,14 +56,16 @@ function RequireGuest({ children }: { children: JSX.Element }) {
 }
 
 function AppShell() {
-    const { isAuthenticated, signOut } = useAuth();
+    const { isAuthenticated } = useAuth();
 
     return (
         <div className="app-shell">
             <header className="topbar">
                 <div className="topbar-inner">
                     <div className="topbar-brand">
-                        <h1>Fix My Kit</h1>
+                        <Link to="/repair" className="topbar-brand-link">
+                            <h1>Fix My Kit</h1>
+                        </Link>
                     </div>
                     <nav className="topbar-nav">
                         {!isAuthenticated ? (
@@ -74,14 +77,13 @@ function AppShell() {
                                 <NavLink to="/repair">Заявка</NavLink>
                                 <NavLink to="/requests">Все заявки</NavLink>
                                 <NavLink to="/admin">Админка</NavLink>
-                                <button type="button" className="nav-button" onClick={signOut}>
-                                    Выйти
-                                </button>
+                                <UserAccountMenu />
                             </>
                         )}
                     </nav>
                 </div>
             </header>
+            <div className="app-shell-main">
             <Routes>
                 <Route
                     path="/"
@@ -102,6 +104,7 @@ function AppShell() {
                 <Route path="/admin/add/user" element={<Navigate to="/admin/users" replace />} />
                 <Route path="/scan" element={<ErrorBoundary><QRScan /></ErrorBoundary>} />
             </Routes>
+            </div>
         </div>
     );
 }

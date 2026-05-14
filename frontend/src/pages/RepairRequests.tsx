@@ -1,26 +1,14 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
 import { useToast } from '../context/ToastContext';
-import { ApiError } from '../api/client';
 import { isRepairRequestSynced, syncAllUnsynchronizedRepairRequests, syncRepairRequestTracker } from '../api/repairRequests';
 import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
+import { formatApiError } from '../utils/formatApiError';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
-}
-
 export function RepairRequests() {
+    const navigate = useNavigate();
     const { repairRequests, getDeviceById, refresh } = useAppData();
     const { showSuccess, showError } = useToast();
     const [bulkLoading, setBulkLoading] = useState(false);
@@ -48,6 +36,10 @@ export function RepairRequests() {
         }
     }
 
+    function goToRequest(id: string) {
+        navigate(`/requests/${id}`);
+    }
+
     return (
         <main className="page page--wide">
             <h2>Все заявки</h2>
@@ -58,15 +50,15 @@ export function RepairRequests() {
                     </button>
                 </div>
                 <div className="table-wrap">
-                    <table>
+                    <table className="requests-table">
                         <thead>
                             <tr>
-                                <th>Дата</th>
-                                <th>Устройство</th>
-                                <th>Заявитель</th>
-                                <th>Статус</th>
-                                <th>Трекер</th>
-                                <th />
+                                <th className="table-col-center">Дата</th>
+                                <th className="table-col-center">Устройство</th>
+                                <th className="table-col-center">Заявитель</th>
+                                <th className="table-col-center">Статус</th>
+                                <th className="table-col-center">Трекер</th>
+                                <th className="table-col-center table-col--narrow" />
                             </tr>
                         </thead>
                         <tbody>
@@ -80,36 +72,49 @@ export function RepairRequests() {
                                     const canSync = !synced && request.status !== 'closed';
                                     const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
                                     return (
-                                        <tr key={request.id}>
-                                            <td>{new Date(request.createdAt).toLocaleString('ru-RU')}</td>
-                                            <td>
-                                                <Link to={`/requests/${request.id}`}>
-                                                    {getDeviceById(request.deviceId)?.inventoryNumber ?? request.deviceId}
-                                                </Link>
+                                        <tr
+                                            key={request.id}
+                                            className="requests-row-clickable"
+                                            tabIndex={0}
+                                            onClick={() => goToRequest(request.id)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                    event.preventDefault();
+                                                    goToRequest(request.id);
+                                                }
+                                            }}
+                                        >
+                                            <td className="table-col-center">{new Date(request.createdAt).toLocaleString('ru-RU')}</td>
+                                            <td className="table-col-center">
+                                                {getDeviceById(request.deviceId)?.inventoryNumber ?? request.deviceId}
                                             </td>
-                                            <td>{request.requesterName}</td>
-                                            <td className="status-cell">
+                                            <td className="table-col-center">{request.requesterName}</td>
+                                            <td className="status-cell table-col-center">
                                                 <span className={repairRequestStatusPillClass(request.status)}>
                                                     {repairRequestStatusLabel(request.status)}
                                                 </span>
                                             </td>
-                                            <td>
-                                                {synced ? (
-                                                    trackerHref ? (
-                                                        <a href={trackerHref} target="_blank" rel="noreferrer">
-                                                            {request.ticketKey ?? 'открыть'}
-                                                        </a>
-                                                    ) : (
-                                                        'да'
-                                                    )
-                                                ) : (
-                                                    'нет'
-                                                )}
+                                            <td className="table-col-center">
+                                                {synced ? (request.ticketKey ? request.ticketKey : 'да') : 'нет'}
                                             </td>
-                                            <td>
-                                                {canSync ? (
+                                            <td
+                                                className="table-cell-actions table-col-center requests-row-actions-cell"
+                                                onClick={(event) => event.stopPropagation()}
+                                                onKeyDown={(event) => event.stopPropagation()}
+                                            >
+                                                {trackerHref ? (
+                                                    <a
+                                                        href={trackerHref}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="btn-ghost btn-compact"
+                                                        onClick={(event) => event.stopPropagation()}
+                                                    >
+                                                        Перейти в Tracker
+                                                    </a>
+                                                ) : canSync ? (
                                                     <button type="button" className="btn-ghost btn-compact" onClick={() => void handleRowSync(request.id)}>
-                                                        В трекер
+                                                        Синхронизировать
                                                     </button>
                                                 ) : null}
                                             </td>
