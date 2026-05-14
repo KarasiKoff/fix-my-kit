@@ -1,10 +1,9 @@
 """Входящие HTTP-вызовы из триггеров Yandex Tracker"""
 
 import hmac
-import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -22,8 +21,6 @@ from backend.app.services.repair_history_service import add_repair_history
 from backend.app.services.repair_request_closure_service import (
     record_repair_request_closed,
 )
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
@@ -142,7 +139,6 @@ def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
     ),
 )
 def yandex_tracker_close_repair_request(
-    request: Request,
     payload: YandexTrackerWebhookPayload,
     db: Session = Depends(get_db),
     x_tracker_webhook_secret: Annotated[
@@ -150,13 +146,6 @@ def yandex_tracker_close_repair_request(
     ] = None,
 ) -> YandexTrackerWebhookResponse:
     _verify_webhook_secret(x_tracker_webhook_secret)
-
-    client = request.client.host if request.client else None
-    logger.info(
-        "yandex_tracker_webhook payload=%s client=%s",
-        payload.model_dump(),
-        client,
-    )
 
     key = (payload.issue_key or "").strip()
     iid = (payload.issue_id or "").strip()
@@ -213,11 +202,6 @@ def yandex_tracker_close_repair_request(
                 detail="webhook_actor_missing_restart_app",
             )
         closer = _resolve_closed_by_user(db, payload.user, fallback)
-        logger.info(
-            "yandex_tracker_webhook closing closed_by_login=%s used_service_actor_fallback=%s",
-            closer.login,
-            closer.id == fallback.id,
-        )
         record_repair_request_closed(db, repair_request, closer, payload.resolution)
         db.commit()
         return YandexTrackerWebhookResponse(
