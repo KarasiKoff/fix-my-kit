@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import avatarImg from '../icon/account-avatar-man-svgrepo-com.svg';
+import avatarImg from '../icon/account-avatar.svg';
 
 export function UserAccountMenu() {
     const { user, signOut } = useAuth();
