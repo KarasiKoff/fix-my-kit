@@ -4,7 +4,7 @@ import { QRScanner } from '../components/QRScanner';
 import { useAuth } from '../hooks/useAuth';
 import { useAppData } from '../context/AppDataContext';
 import { useToast } from '../context/ToastContext';
-import { ApiError } from '../api/client';
+import { formatApiError } from '../utils/formatApiError';
 import { fetchPublicDeviceByInventory } from '../api/devices';
 
 function extractDeviceId(raw: string): string | null {
@@ -23,19 +23,6 @@ function extractDeviceId(raw: string): string | null {
         return pathMatch[1];
     }
     return null;
-}
-
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
 }
 
 export function QRScan() {
@@ -78,13 +65,10 @@ export function QRScan() {
     }
 
     return (
-        <main className="page">
+        <main className="page page--scanner">
             <h2>Сканирование QR</h2>
-            <section className="card">
-                <p className="qr-scan-hint">
-                    Код с устройства или инвентарный номер открывают страницу создания заявки. После входа в систему тот же ввод
-                    также подходит для поиска по списку загруженных устройств.
-                </p>
+            <section className="card card--scanner">
+                <p className="qr-scan-hint muted-text">Введите в поле ниже инвентарный номер или UUID устройства.</p>
                 <QRScanner onScan={handleScan} />
             </section>
         </main>

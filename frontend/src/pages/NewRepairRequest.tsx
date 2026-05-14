@@ -4,23 +4,10 @@ import { RepairRequestForm } from '../components/RepairRequestForm';
 import { useAppData } from '../context/AppDataContext';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
-import { ApiError } from '../api/client';
 import { fetchPublicDeviceById } from '../api/devices';
 import { createRepairRequest as submitRepairRequest } from '../api/repairRequests';
 import { Device } from '../types/device';
-
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
-}
+import { formatApiError } from '../utils/formatApiError';
 
 export function NewRepairRequest() {
     const { isAuthenticated } = useAuth();

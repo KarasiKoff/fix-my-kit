@@ -1,22 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { changeOwnPassword } from '../../api/auth';
-import { ApiError } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
-
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
-}
+import { formatApiError } from '../../utils/formatApiError';
 
 const hubItems = [
     { to: '/admin/users', title: 'Пользователи', description: 'Список, роли, сброс пароля', adminOnly: false },

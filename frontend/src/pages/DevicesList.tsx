@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
 import { deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 
 export function DevicesList() {
+    const navigate = useNavigate();
     const { devices, isLoading, error } = useAppData();
     const [filters, setFilters] = React.useState({
         inventoryNumber: '',
@@ -21,6 +22,10 @@ export function DevicesList() {
         const byStatus = filters.status === '' || device.status === filters.status;
         return byInventory && byCategory && byRoom && byResponsible && byStatus;
     });
+
+    function openDevice(id: string) {
+        navigate(`/devices/${id}`);
+    }
 
     return (
         <main className="page">
@@ -64,31 +69,47 @@ export function DevicesList() {
             <section className="card">
                 <h3>Оборудование ({filteredDevices.length})</h3>
                 <div className="table-wrap">
-                    <table>
+                    <table className="requests-table">
                         <thead>
                             <tr>
-                                <th>Инв. номер</th>
-                                <th>Название</th>
-                                <th>Категория</th>
-                                <th>Кабинет</th>
-                                <th>Ответственный</th>
-                                <th>Статус</th>
-                                <th>Карточка</th>
+                                <th className="table-col-center">Инв. номер</th>
+                                <th className="table-col-center">Название</th>
+                                <th className="table-col-center">Категория</th>
+                                <th className="table-col-center">Кабинет</th>
+                                <th className="table-col-center">Ответственный</th>
+                                <th className="table-col-center">Статус</th>
+                                <th className="table-col-center">Карточка</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredDevices.map((device) => (
-                                <tr key={device.id}>
-                                    <td>{device.inventoryNumber}</td>
-                                    <td>{device.name}</td>
-                                    <td>{device.category}</td>
-                                    <td>{device.room}</td>
-                                    <td>{device.responsible}</td>
-                                    <td className="status-cell">
+                                <tr
+                                    key={device.id}
+                                    className="requests-row-clickable"
+                                    tabIndex={0}
+                                    onClick={() => openDevice(device.id)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            openDevice(device.id);
+                                        }
+                                    }}
+                                >
+                                    <td className="table-col-center">{device.inventoryNumber}</td>
+                                    <td className="table-col-center">{device.name}</td>
+                                    <td className="table-col-center">{device.category}</td>
+                                    <td className="table-col-center">{device.room}</td>
+                                    <td className="table-col-center">{device.responsible}</td>
+                                    <td className="status-cell table-col-center">
                                         <span className={deviceRepairStatusPillClass(device.status)}>{deviceRepairStatusLabel(device.status)}</span>
                                     </td>
-                                    <td>
-                                        <Link to={`/devices/${device.id}`}>Открыть</Link>
+                                    <td
+                                        className="table-col-center requests-row-actions-cell"
+                                        onClick={(event) => event.stopPropagation()}
+                                    >
+                                        <Link to={`/devices/${device.id}`} onClick={(event) => event.stopPropagation()}>
+                                            Открыть
+                                        </Link>
                                     </td>
                                 </tr>
                             ))}

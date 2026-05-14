@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ApiError } from '../api/client';
 import { fetchDeviceById } from '../api/devices';
 import {
     fetchRepairRequest,
@@ -15,19 +14,9 @@ import { RepairRequestDetail } from '../types/repairRequest';
 import { useToast } from '../context/ToastContext';
 import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
-
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
-}
+import { formatApiError } from '../utils/formatApiError';
+import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
+import { fetchUserListItemById } from '../api/users';
 
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
     if (s === 'new') {
@@ -44,6 +33,7 @@ export function RepairRequestDetailPage() {
     const [device, setDevice] = useState<Device | null>(null);
     const [loading, setLoading] = useState(true);
     const [closeNote, setCloseNote] = useState('');
+    const [closedByDbLabel, setClosedByDbLabel] = useState<string | null>(null);
 
     const reload = useCallback(async () => {
         if (!id) {
@@ -67,6 +57,52 @@ export function RepairRequestDetailPage() {
     useEffect(() => {
         void reload();
     }, [reload]);
+
+    const noteParts = useMemo(() => {
+        if (!request) {
+            return { resolutionTrimmed: '', closedFromMeta: '' };
+        }
+        const { resolutionBody, trackerClosedBy } = splitResolutionNoteFromApi(request.resolutionNote);
+        const resolutionTrimmed = resolutionBody.trim();
+        const closedFromMeta =
+            apiStatusFromUi(request.status) === 'closed'
+                ? request.closedByTrackerDisplay?.trim() || trackerClosedBy || ''
+                : '';
+        return { resolutionTrimmed, closedFromMeta };
+    }, [request]);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function resolveClosedByName() {
+            if (!request || apiStatusFromUi(request.status) !== 'closed') {
+                setClosedByDbLabel(null);
+                return;
+            }
+            if (noteParts.closedFromMeta) {
+                setClosedByDbLabel(null);
+                return;
+            }
+            const uid = request.closedByUserId?.trim();
+            if (!uid) {
+                setClosedByDbLabel(null);
+                return;
+            }
+            try {
+                const u = await fetchUserListItemById(uid);
+                if (!cancelled) {
+                    setClosedByDbLabel(u ? u.name || u.login : null);
+                }
+            } catch {
+                if (!cancelled) {
+                    setClosedByDbLabel(null);
+                }
+            }
+        }
+        void resolveClosedByName();
+        return () => {
+            cancelled = true;
+        };
+    }, [request, noteParts.closedFromMeta]);
 
     async function trySync() {
         if (!id) {
@@ -118,7 +154,19 @@ export function RepairRequestDetailPage() {
     if (loading) {
         return (
             <main className="page page--wide page--centered">
-                <h2>Заявка</h2>
+                <div className="admin-page-head admin-page-head--edges">
+                    <button type="button" className="admin-back-link" onClick={() => navigate('/requests')}>
+                        ← К заявкам
+                    </button>
+                    <div className="page-title-actions">
+                        <Link to="/repair" className="page-title page-title--link">
+                            Заявка на ремонт
+                        </Link>
+                        <button type="button" className="btn-ghost btn-compact" disabled>
+                            Обновить
+                        </button>
+                    </div>
+                </div>
                 <p>Загрузка…</p>
             </main>
         );
@@ -127,7 +175,19 @@ export function RepairRequestDetailPage() {
     if (!request) {
         return (
             <main className="page page--wide page--centered">
-                <h2>Заявка</h2>
+                <div className="admin-page-head admin-page-head--edges">
+                    <button type="button" className="admin-back-link" onClick={() => navigate('/requests')}>
+                        ← К заявкам
+                    </button>
+                    <div className="page-title-actions">
+                        <Link to="/repair" className="page-title page-title--link">
+                            Заявка на ремонт
+                        </Link>
+                        <button type="button" className="btn-ghost btn-compact" onClick={() => void reload()}>
+                            Обновить
+                        </button>
+                    </div>
+                </div>
                 <p>Не найдена.</p>
                 <button type="button" className="btn-ghost" onClick={() => navigate('/requests')}>
                     К списку заявок
@@ -140,6 +200,8 @@ export function RepairRequestDetailPage() {
     const apiSt = apiStatusFromUi(request.status);
     const canAct = apiSt !== 'closed';
     const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
+    const resolutionNoteTrimmed = noteParts.resolutionTrimmed;
+    const closedByDisplayed = noteParts.closedFromMeta || closedByDbLabel || '';
 
     return (
         <main className="page page--wide page--centered">
@@ -147,36 +209,55 @@ export function RepairRequestDetailPage() {
                 <button type="button" className="admin-back-link" onClick={() => navigate('/requests')}>
                     ← К заявкам
                 </button>
-                <h2 className="page-title">Заявка на ремонт</h2>
+                <div className="page-title-actions">
+                    <Link to="/repair" className="page-title page-title--link">
+                        Заявка на ремонт
+                    </Link>
+                    <button type="button" className="btn-ghost btn-compact" onClick={() => void reload()}>
+                        Обновить
+                    </button>
+                </div>
             </div>
 
-            <section className="card card-form card--narrow-device">
-                <div className="device-title-row">
-                    <p>
-                        <strong>Статус:</strong>{' '}
-                        <span className={repairRequestStatusPillClass(request.status)} style={{ marginLeft: 6 }}>
-                            {repairRequestStatusLabel(request.status)}
-                        </span>
+            <section className="card card-form card--narrow-device repair-detail-card">
+                <div className="device-title-row repair-detail-head">
+                    <p className="repair-detail-status-line">
+                        <strong>Статус:</strong>
+                        <span className={repairRequestStatusPillClass(request.status)}>{repairRequestStatusLabel(request.status)}</span>
                         {synced ? (
-                            <span className="badge ok" style={{ marginLeft: 8 }}>
-                                Трекер
-                            </span>
+                            <span className="badge ok">Трекер</span>
                         ) : (
-                            <span className="badge danger" style={{ marginLeft: 8 }}>
-                                Нет в Трекере
-                            </span>
+                            <span className="badge danger">Нет в Трекере</span>
                         )}
+                        <span className="repair-detail-status-inline-sep" aria-hidden="true" />
+                        <span className="repair-detail-status-kv repair-detail-status-kv--resolution">
+                            <strong>Резолюция:</strong>{' '}
+                            {resolutionNoteTrimmed ? (
+                                <span className="repair-detail-resolution-text">{resolutionNoteTrimmed}</span>
+                            ) : trackerHref ? (
+                                <span className="repair-detail-resolution-fallback muted-text">
+                                    В ответе заявки текста нет — смотрите поле резолюции в{' '}
+                                    <a href={trackerHref} target="_blank" rel="noreferrer">
+                                        задаче Трекера
+                                    </a>
+                                    .
+                                </span>
+                            ) : (
+                                <span>—</span>
+                            )}
+                        </span>
+                        {apiSt === 'closed' ? (
+                            <span className="repair-detail-status-kv repair-detail-status-kv--closed-by">
+                                <strong>Кем закрыт:</strong>{' '}
+                                <span>{closedByDisplayed || '—'}</span>
+                            </span>
+                        ) : null}
                     </p>
-                    {!synced && canAct ? (
-                        <button type="button" className="btn-primary" onClick={() => void trySync()}>
-                            Синхронизировать с Трекером
-                        </button>
-                    ) : null}
                 </div>
-                <div className="repair-request-detail-stack">
-                    <div className="repair-detail-line">
-                        <span className="repair-detail-line__label">Устройство:</span>
-                        <span className="repair-detail-line__value">
+                <ul className="repair-detail-list">
+                    <li>
+                        <strong>Устройство:</strong>
+                        <span>
                             {device ? (
                                 <Link to={`/devices/${device.id}`}>
                                     {device.inventoryNumber} — {device.name}
@@ -185,40 +266,64 @@ export function RepairRequestDetailPage() {
                                 request.deviceId
                             )}
                         </span>
-                    </div>
-                    <div className="repair-detail-line">
-                        <span className="repair-detail-line__label">Заявитель:</span>
-                        <span className="repair-detail-line__value">{request.requesterName || '—'}</span>
-                    </div>
-                    <div className="repair-detail-line">
-                        <span className="repair-detail-line__label">Создана:</span>
-                        <span className="repair-detail-line__value">{new Date(request.createdAt).toLocaleString('ru-RU')}</span>
-                    </div>
+                    </li>
+                    <li>
+                        <strong>Заявитель:</strong>
+                        <span>{request.requesterName || '—'}</span>
+                    </li>
+                    <li>
+                        <strong>Создана:</strong>
+                        <span>{new Date(request.createdAt).toLocaleString('ru-RU')}</span>
+                    </li>
                     {trackerHref ? (
-                        <div className="repair-detail-line">
-                            <span className="repair-detail-line__label">Тикет:</span>
-                            <span className="repair-detail-line__value">
+                        <li>
+                            <strong>Тикет:</strong>
+                            <span>
                                 <a href={trackerHref} target="_blank" rel="noreferrer">
                                     {request.ticketKey ?? trackerHref}
                                 </a>
                             </span>
-                        </div>
+                        </li>
                     ) : null}
-                    <div className="repair-detail-description">
-                        <span className="repair-detail-line__label">Описание:</span>
+                    <li className="repair-detail-list__block">
+                        <strong>Описание:</strong>
                         <p className="request-description-block">{request.description}</p>
-                    </div>
-                    {request.resolutionNote ? (
-                        <div className="repair-detail-line">
-                            <span className="repair-detail-line__label">Итог:</span>
-                            <span className="repair-detail-line__value">{request.resolutionNote}</span>
-                        </div>
+                    </li>
+                </ul>
+                <div className="repair-detail-tracker-footer repair-detail-tracker-footer--row">
+                    {trackerHref ? (
+                        <a
+                            href={trackerHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
+                        >
+                            Перейти в Tracker
+                        </a>
+                    ) : (
+                        <button
+                            type="button"
+                            className="repair-tracker-footer-btn repair-tracker-footer-btn--muted"
+                            disabled
+                            title="Сначала синхронизируйте заявку — появится ссылка на тикет в Трекере"
+                        >
+                            Перейти в Tracker
+                        </button>
+                    )}
+                    {!trackerHref ? (
+                        <button
+                            type="button"
+                            className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
+                            onClick={() => void trySync()}
+                        >
+                            Синхронизировать с Трекером
+                        </button>
                     ) : null}
                 </div>
             </section>
 
             {canAct ? (
-                <section className="card card-form card--narrow-device request-actions-panel">
+                <section className="card card-form card--narrow-device request-actions-panel repair-detail-actions">
                     <h3>Действия</h3>
                     <div className="actions-row request-actions">
                         {apiSt === 'open' ? (

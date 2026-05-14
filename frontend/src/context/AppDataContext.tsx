@@ -4,6 +4,7 @@ import { fetchDevices, updateDeviceStatus } from '../api/devices';
 import { createRepairRequest as createRepairRequestApi, fetchRepairRequests } from '../api/repairRequests';
 import { Device } from '../types/device';
 import { RepairRequest } from '../types/repairRequest';
+import { formatApiError } from '../utils/formatApiError';
 
 type NewRequestPayload = {
     deviceId: string;
@@ -53,7 +54,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         refresh()
             .catch((err) => {
                 if (active) {
-                    setError(err instanceof Error ? err.message : 'Не удалось загрузить данные');
+                    setError(formatApiError(err));
                 }
             })
             .finally(() => {
