@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { formatApiError } from '../utils/formatApiError';
 
 export function Login() {
     const { isAuthenticated, signIn } = useContext(AuthContext);
@@ -17,7 +18,7 @@ export function Login() {
             await signIn(username, password);
             navigate('/devices', { replace: true });
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Ошибка входа');
+            setError(formatApiError(err));
         }
     }
 

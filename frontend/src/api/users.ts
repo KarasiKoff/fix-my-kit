@@ -45,6 +45,23 @@ export async function fetchUsers(params?: { search?: string; limit?: number; off
     return { items: response.items.map(mapUser), total: response.total };
 }
 
+/** Поиск пользователя по id в общем списке API (пагинация до первого совпадения). */
+export async function fetchUserListItemById(userId: string): Promise<UserListItem | null> {
+    const limit = 100;
+    let offset = 0;
+    for (;;) {
+        const { items, total } = await fetchUsers({ limit, offset });
+        const hit = items.find((u) => u.id === userId);
+        if (hit) {
+            return hit;
+        }
+        offset += limit;
+        if (offset >= total || items.length === 0) {
+            return null;
+        }
+    }
+}
+
 export async function createUser(payload: {
     login: string;
     password: string;

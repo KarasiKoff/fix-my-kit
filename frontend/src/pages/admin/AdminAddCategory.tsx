@@ -2,21 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
-import { ApiError } from '../../api/client';
 import { createCategory, deleteCategory, fetchCategories, updateCategory, type CategoryDto } from '../../api/categories';
-
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
-}
+import { formatApiError } from '../../utils/formatApiError';
 
 export function AdminAddCategory() {
     const { showSuccess, showError } = useToast();
@@ -109,7 +96,7 @@ export function AdminAddCategory() {
     const sortedRows = [...rows].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
     return (
-        <main className="page page--wide">
+        <main className="page page--centered">
             <div className="admin-page-head admin-page-head--edges">
                 <Link to="/admin" className="admin-back-link">
                     ← К админке
@@ -117,7 +104,7 @@ export function AdminAddCategory() {
                 <h2 className="page-title">Категории</h2>
             </div>
 
-            <section className="card card--stretch">
+            <section className="card admin-crud-sheet">
                 <form className="admin-inline-form admin-inline-form--tight admin-category-page-form" onSubmit={handleAdd}>
                     <label className="admin-inline-field admin-inline-field--grow">
                         <span className="admin-inline-label">Название</span>
@@ -140,9 +127,9 @@ export function AdminAddCategory() {
                     <table className="admin-table">
                         <thead>
                             <tr>
-                                <th>Название</th>
-                                <th>Активна</th>
-                                <th />
+                                <th className="table-col-start">Название</th>
+                                <th className="table-col-center">Активна</th>
+                                <th className="table-col-center table-col--narrow">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -157,15 +144,15 @@ export function AdminAddCategory() {
                             ) : (
                                 sortedRows.map((row) => (
                                     <tr key={row.id}>
-                                        <td>
+                                        <td className="table-col-start admin-table-cell--input">
                                             {editingId === row.id ? (
                                                 <input value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!isAdmin} />
                                             ) : (
                                                 row.name
                                             )}
                                         </td>
-                                        <td>{row.is_active ? 'да' : 'нет'}</td>
-                                        <td className="admin-row-actions">
+                                        <td className="table-col-center">{row.is_active ? 'да' : 'нет'}</td>
+                                        <td className="admin-row-actions table-col-center">
                                             {editingId === row.id ? (
                                                 <>
                                                     <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>

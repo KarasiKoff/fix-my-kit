@@ -1,4 +1,5 @@
 import React, { createContext, useEffect, useState, ReactNode } from 'react';
+import { ApiError } from '../api/client';
 import { clearStoredAuthToken, getCurrentUser, getStoredAuthToken, login as loginApi, setStoredAuthToken } from '../api/auth';
 import { User } from '../types/user';
 
@@ -36,11 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser({
                     id: currentUser.id,
                     name: currentUser.full_name ?? currentUser.login,
+                    login: currentUser.login,
                     role: currentUser.role,
                 });
             })
-            .catch(() => {
-                clearStoredAuthToken();
+            .catch((err) => {
+                if (err instanceof ApiError && err.status === 401) {
+                    clearStoredAuthToken();
+                }
                 setIsAuthenticated(false);
                 setUser(null);
             })
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
             id: currentUser.id,
             name: currentUser.full_name ?? currentUser.login,
+            login: currentUser.login,
             role: currentUser.role,
         });
     }

@@ -2,26 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import { useAppData } from '../../context/AppDataContext';
-import { ApiError } from '../../api/client';
 import { createDevice } from '../../api/devices';
 import { fetchCategories, type CategoryDto } from '../../api/categories';
 import { fetchAudiences, type AudienceDto } from '../../api/audiences';
 import { fetchUsers, type UserListItem } from '../../api/users';
 import { Device } from '../../types/device';
 import { deviceRepairStatusLabel } from '../../utils/statusDisplay';
-
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
-}
+import { formatApiError } from '../../utils/formatApiError';
 
 export function AdminAddDevice() {
     const { showSuccess, showError } = useToast();

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
-import { ApiError } from '../../api/client';
 import {
     adminResetUserPassword,
     createUser,
@@ -9,19 +8,7 @@ import {
     updateUser,
     type UserListItem,
 } from '../../api/users';
-
-function formatApiError(err: unknown): string {
-    if (err instanceof ApiError) {
-        if (typeof err.detail === 'string') {
-            return err.detail;
-        }
-        return JSON.stringify(err.detail);
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return 'Ошибка запроса';
-}
+import { formatApiError } from '../../utils/formatApiError';
 
 export function AdminUsersPanel() {
     const { showSuccess, showError } = useToast();
@@ -210,9 +197,11 @@ export function AdminUsersPanel() {
                             placeholder="Логин или ФИО..."
                         />
                     </label>
-                    <button type="button" className="btn-ghost btn-compact" onClick={() => void load()}>
-                        Обновить
-                    </button>
+                    <div className="admin-toolbar-actions">
+                        <button type="button" className="btn-ghost btn-compact" disabled={loading} onClick={() => void load()}>
+                            Обновить список
+                        </button>
+                    </div>
                 </div>
 
                 {resetUserId ? (
@@ -237,12 +226,12 @@ export function AdminUsersPanel() {
                     <table className="admin-table">
                         <thead>
                             <tr>
-                                <th>Логин</th>
-                                <th>ФИО</th>
-                                <th>Роль</th>
-                                <th>Статус</th>
-                                <th>Создан</th>
-                                <th />
+                                <th className="table-col-center">Логин</th>
+                                <th className="table-col-center">ФИО</th>
+                                <th className="table-col-center">Роль</th>
+                                <th className="table-col-center">Статус</th>
+                                <th className="table-col-center">Создан</th>
+                                <th className="table-col-center table-col--narrow">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -261,8 +250,8 @@ export function AdminUsersPanel() {
                             ) : (
                                 filtered.map((u) => (
                                     <tr key={u.id} className={!u.isActive ? 'row-disabled' : undefined}>
-                                        <td>{u.login}</td>
-                                        <td>
+                                        <td className="table-col-center">{u.login}</td>
+                                        <td className="table-col-center admin-table-cell--input">
                                             {editingId === u.id ? (
                                                 <input
                                                     value={editDraft.fullName}
@@ -273,7 +262,7 @@ export function AdminUsersPanel() {
                                                 u.name || '—'
                                             )}
                                         </td>
-                                        <td>
+                                        <td className="table-col-center admin-table-cell--input">
                                             {editingId === u.id ? (
                                                 isCurrentUser(u) ? (
                                                     u.role === 'admin' ? (
@@ -299,13 +288,13 @@ export function AdminUsersPanel() {
                                                 'Сисадмин'
                                             )}
                                         </td>
-                                        <td>
+                                        <td className="table-col-center">
                                             <span className={`status-badge ${u.isActive ? 'status-badge--on' : 'status-badge--off'}`}>
                                                 {u.isActive ? 'активен' : 'отключён'}
                                             </span>
                                         </td>
-                                        <td>{new Date(u.createdAt).toLocaleString('ru-RU')}</td>
-                                        <td className="admin-row-actions">
+                                        <td className="table-col-center">{new Date(u.createdAt).toLocaleString('ru-RU')}</td>
+                                        <td className="admin-row-actions table-col-center">
                                             {editingId === u.id ? (
                                                 <>
                                                     <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
