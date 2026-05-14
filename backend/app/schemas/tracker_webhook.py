@@ -6,24 +6,26 @@ class YandexTrackerWebhookPayload(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    issue_key: str | None = Field(default=None, description="Ключ задачи, например FixMyKit-42")
+    issue_key: str | None = Field(
+        default=None, description="Ключ задачи, например FixMyKit-666"
+    )
     issue_id: str | None = Field(
         default=None,
         description="Id задачи в Yandex Tracker",
     )
-    resolution: str | None = Field(default=None, description="Текст резолюции / комментарий")
+    resolution: str | None = Field(
+        default=None, description="Текст резолюции / комментарий"
+    )
     tracker_status: str | None = Field(
         default=None,
         description=(
-            "Строка статуса из Трекера (например {{issue.status}}), точное совпадение с ключами "
-            "TRACKER_STATUS_ALIASES в backend. Пусто — только закрыть заявку."
+            "Строка статуса из Tracker (например {{issue.status}}), точное совпадение с ключами "
+            "TRACKER_STATUS_ALIASES в backend."
         ),
     )
     user: str | None = Field(
         default=None,
-        description=(
-            "Кто закрыл в Yandex Tracker"
-        ),
+        description=("Кто закрыл в Yandex Tracker"),
     )
 
     @field_validator("issue_id", mode="before")
@@ -47,5 +49,10 @@ class YandexTrackerWebhookResponse(BaseModel):
     status: str
     repair_request_id: str | None = None
     detail: str | None = None
-    request_status: str | None = Field(default=None, description="Статус заявки после обработки (open|in_progress|closed)")
-    closed_by_login: str | None = Field(default=None, description="Кого записали в closed_by (login), только при closed")
+    request_status: str | None = Field(
+        default=None,
+        description="Статус заявки после обработки",
+    )
+    closed_by_login: str | None = Field(
+        default=None, description="Кого записали в closed_by (login), только при closed"
+    )

@@ -57,15 +57,16 @@ TRACKER_STATUS_ALIASES: dict[str, RequestStatus] = {
 
 
 def _map_tracker_status_to_request(raw: str) -> RequestStatus | None:
-    """None — в payload нет статуса: только закрытие. Иначе ищем точное совпадение в TRACKER_STATUS_ALIASES."""
+    """Точное совпадение в TRACKER_STATUS_ALIASES; неизвестная строка — None (далее 400)"""
     if not raw or not raw.strip():
         return None
     return TRACKER_STATUS_ALIASES.get(raw.strip())
 
 
-def _resolve_closing_user(
+def _resolve_closed_by_user(
     db: Session, tracker_user_raw: str | None, fallback: User
 ) -> User:
+    """Кто в БД считается закрывшим заявку: payload.user из Tracker или служебный пользователь вебхука"""
     raw = (tracker_user_raw or "").strip()
     if not raw:
         return fallback
@@ -121,7 +122,7 @@ def _find_repair_request(
 
 
 def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
-    """Переоткрытие из Закрыт: сбрасываем поля закрытия, устройство снова в ремонте."""
+    """Переоткрытие из Закрыт: сбрасываем поля закрытия, устройство снова в ремонте"""
     repair_request.closed_at = None
     repair_request.closed_by_user_id = None
     device = db.query(Device).filter(Device.id == repair_request.device_id).first()
@@ -135,8 +136,8 @@ def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
     summary="Синхронизация заявки по событию из Yandex Tracker",
     description=(
         "Один URL. В JSON: `tracker_status` = `{{issue.status}}` — строка как в Трекере, "
-        "точное совпадение с ключами в `TRACKER_STATUS_ALIASES`"
-        "Пустой `tracker_status` — только закрытие заявки. "
+        "точное совпадение с ключами в `TRACKER_STATUS_ALIASES`. "
+        "Пустой `tracker_status` — заявку не меняем (noop). Закрытие только при статусе «Закрыт». "
         f"Заголовок `{TRACKER_WEBHOOK_SECRET_HEADER}` = `TRACKER_WEBHOOK_SECRET`."
     ),
 )
@@ -157,23 +158,6 @@ def yandex_tracker_close_repair_request(
         client,
     )
 
-    login = (
-        settings.server.tracker_webhook_actor_login or "tracker_webhook"
-    ).strip() or "tracker_webhook"
-    fallback = db.query(User).filter(User.login == login).first()
-    if fallback is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="webhook_actor_missing_restart_app",
-        )
-
-    actor = _resolve_closing_user(db, payload.user, fallback)
-    logger.info(
-        "yandex_tracker_webhook resolved closed_by login=%s used_tracker_fallback=%s",
-        actor.login,
-        actor.id == fallback.id,
-    )
-
     key = (payload.issue_key or "").strip()
     iid = (payload.issue_id or "").strip()
     repair_request = _find_repair_request(db, key, iid)
@@ -184,13 +168,22 @@ def yandex_tracker_close_repair_request(
         )
 
     raw_status = (payload.tracker_status or "").strip()
-    mapped = _map_tracker_status_to_request(raw_status) if raw_status else None
-    if raw_status and mapped is None:
+    if not raw_status:
+        return YandexTrackerWebhookResponse(
+            status="noop",
+            repair_request_id=str(repair_request.id),
+            detail="missing_tracker_status",
+            request_status=repair_request.status.value,
+            closed_by_login=None,
+        )
+
+    mapped = _map_tracker_status_to_request(raw_status)
+    if mapped is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "unmapped_tracker_status", "value": raw_status},
         )
-    target: RequestStatus = mapped if mapped is not None else RequestStatus.CLOSED
+    target: RequestStatus = mapped
 
     if repair_request.status == target:
         return YandexTrackerWebhookResponse(
@@ -210,14 +203,29 @@ def yandex_tracker_close_repair_request(
     rid = str(repair_request.id)
 
     if target == RequestStatus.CLOSED:
-        record_repair_request_closed(db, repair_request, actor, payload.resolution)
+        login = (
+            settings.server.tracker_webhook_actor_login or "tracker_webhook"
+        ).strip() or "tracker_webhook"
+        fallback = db.query(User).filter(User.login == login).first()
+        if fallback is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="webhook_actor_missing_restart_app",
+            )
+        closer = _resolve_closed_by_user(db, payload.user, fallback)
+        logger.info(
+            "yandex_tracker_webhook closing closed_by_login=%s used_service_actor_fallback=%s",
+            closer.login,
+            closer.id == fallback.id,
+        )
+        record_repair_request_closed(db, repair_request, closer, payload.resolution)
         db.commit()
         return YandexTrackerWebhookResponse(
             status="closed",
             repair_request_id=rid,
             detail=None,
             request_status=RequestStatus.CLOSED.value,
-            closed_by_login=actor.login,
+            closed_by_login=closer.login,
         )
 
     if repair_request.status == RequestStatus.CLOSED:
@@ -232,7 +240,7 @@ def yandex_tracker_close_repair_request(
         repair_request_id=repair_request.id,
         old_status=None,
         new_status=None,
-        note=f"Статус из Трекера: {raw_status or target.value}",
+        note=f"Статус из Трекера: {raw_status}",
     )
     db.commit()
 
