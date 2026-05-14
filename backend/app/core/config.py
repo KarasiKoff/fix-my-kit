@@ -17,6 +17,11 @@ class ServerConfig(BaseSettings):
     app_name: str = Field(default="Fix My Kit API", alias="APP_NAME")
     api_host: str = Field(default="0.0.0.0", alias="API_HOST")
     api_port: int = Field(default=8000, alias="API_PORT")
+    api_docs_enabled: bool = Field(
+        default=True,
+        alias="API_DOCS_ENABLED",
+        description="Swagger (/docs), ReDoc (/redoc), OpenAPI JSON (/openapi.json)",
+    )
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     jwt_secret_key: str = Field(default="change_me_secret", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")

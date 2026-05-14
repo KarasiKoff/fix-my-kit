@@ -3,11 +3,11 @@ from contextlib import asynccontextmanager
 
 from backend.app.core.config import settings
 
-from backend.app.api.router import api_router 
-from backend.app.services.admin_bootstrap import ensure_admin_user 
-from backend.app.services.tracker_webhook_bootstrap import ensure_tracker_webhook_actor  
-from fastapi import FastAPI 
-from fastapi.middleware.cors import CORSMiddleware 
+from backend.app.api.router import api_router
+from backend.app.services.admin_bootstrap import ensure_admin_user
+from backend.app.services.tracker_webhook_bootstrap import ensure_tracker_webhook_actor
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -17,7 +17,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+_docs = settings.server.api_docs_enabled
+app = FastAPI(
+    title=settings.app_name,
+    lifespan=lifespan,
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
+)
 
 _cors_raw = (settings.server.cors_origins or "").strip()
 _cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
