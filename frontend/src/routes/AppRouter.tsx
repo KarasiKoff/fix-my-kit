@@ -16,6 +16,7 @@ import { AdminAddDevice } from '../pages/admin/AdminAddDevice';
 import { useAuth } from '../hooks/useAuth';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ToastProvider } from '../context/ToastContext';
+import { RouteDocumentTitle } from '../components/RouteDocumentTitle';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
     const { isAuthenticated, isLoading } = useAuth();
@@ -109,6 +110,7 @@ export function AppRouter() {
     return (
         <BrowserRouter>
             <ToastProvider>
+                <RouteDocumentTitle />
                 <AppShell />
             </ToastProvider>
         </BrowserRouter>
