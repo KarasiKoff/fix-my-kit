@@ -1210,6 +1210,126 @@ tbody tr:hover {
   }
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.modal-panel {
+  position: relative;
+  width: min(400px, 100%);
+  max-height: min(92vh, 640px);
+  overflow: auto;
+  box-shadow: var(--shadow-card);
+}
+
+.modal-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.modal-panel__head h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.modal-panel__close {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  margin: -6px -6px 0 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-panel__close:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.modal-panel__meta {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.modal-panel__inv {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.modal-panel__hint {
+  margin: 0 0 16px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.modal-panel__qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  margin-bottom: 18px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.modal-panel__qr img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.modal-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.modal-panel__btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.modal-panel__btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.table-qr-btn {
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.table-qr-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
 @media (max-width: 380px) {
   .topbar-nav a,
   .topbar-nav .nav-button {

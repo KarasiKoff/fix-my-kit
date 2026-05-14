@@ -1,10 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAppData } from '../context/AppDataContext';
+import { RepairQrModal } from '../components/RepairQrModal';
+import { Device } from '../types/device';
 import { deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 
 export function DevicesList() {
     const { devices, isLoading, error } = useAppData();
+    const [qrDevice, setQrDevice] = React.useState<Device | null>(null);
     const [filters, setFilters] = React.useState({
         inventoryNumber: '',
         category: '',
@@ -73,6 +76,7 @@ export function DevicesList() {
                                 <th>Кабинет</th>
                                 <th>Ответственный</th>
                                 <th>Статус</th>
+                                <th>QR заявки</th>
                                 <th>Карточка</th>
                             </tr>
                         </thead>
@@ -88,6 +92,11 @@ export function DevicesList() {
                                         <span className={deviceRepairStatusPillClass(device.status)}>{deviceRepairStatusLabel(device.status)}</span>
                                     </td>
                                     <td>
+                                        <button type="button" className="table-qr-btn" onClick={() => setQrDevice(device)}>
+                                            QR
+                                        </button>
+                                    </td>
+                                    <td>
                                         <Link to={`/devices/${device.id}`}>Открыть</Link>
                                     </td>
                                 </tr>
@@ -96,6 +105,8 @@ export function DevicesList() {
                     </table>
                 </div>
             </section>
+
+            <RepairQrModal open={qrDevice !== null} device={qrDevice} onClose={() => setQrDevice(null)} />
         </main>
     );
 }
