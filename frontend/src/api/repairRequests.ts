@@ -16,6 +16,7 @@ type RepairRequestApi = {
     last_sync_at?: string | null;
     resolution_note?: string | null;
     closed_at?: string | null;
+    closed_by_user_id?: string | null;
     closed_by_tracker_display?: string | null;
 };
 
@@ -41,6 +42,7 @@ function mapDetail(item: RepairRequestApi): RepairRequestDetail {
         ...base,
         resolutionNote: item.resolution_note ?? undefined,
         closedAt: item.closed_at ?? undefined,
+        closedByUserId: item.closed_by_user_id ?? undefined,
         closedByTrackerDisplay: item.closed_by_tracker_display ?? undefined,
     };
 }

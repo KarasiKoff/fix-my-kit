@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchDeviceById } from '../api/devices';
 import {
@@ -16,6 +16,7 @@ import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 import { formatApiError } from '../utils/formatApiError';
 import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
+import { fetchUserListItemById } from '../api/users';
 
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
     if (s === 'new') {
@@ -32,6 +33,7 @@ export function RepairRequestDetailPage() {
     const [device, setDevice] = useState<Device | null>(null);
     const [loading, setLoading] = useState(true);
     const [closeNote, setCloseNote] = useState('');
+    const [closedByDbLabel, setClosedByDbLabel] = useState<string | null>(null);
 
     const reload = useCallback(async () => {
         if (!id) {
@@ -55,6 +57,52 @@ export function RepairRequestDetailPage() {
     useEffect(() => {
         void reload();
     }, [reload]);
+
+    const noteParts = useMemo(() => {
+        if (!request) {
+            return { resolutionTrimmed: '', closedFromMeta: '' };
+        }
+        const { resolutionBody, trackerClosedBy } = splitResolutionNoteFromApi(request.resolutionNote);
+        const resolutionTrimmed = resolutionBody.trim();
+        const closedFromMeta =
+            apiStatusFromUi(request.status) === 'closed'
+                ? request.closedByTrackerDisplay?.trim() || trackerClosedBy || ''
+                : '';
+        return { resolutionTrimmed, closedFromMeta };
+    }, [request]);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function resolveClosedByName() {
+            if (!request || apiStatusFromUi(request.status) !== 'closed') {
+                setClosedByDbLabel(null);
+                return;
+            }
+            if (noteParts.closedFromMeta) {
+                setClosedByDbLabel(null);
+                return;
+            }
+            const uid = request.closedByUserId?.trim();
+            if (!uid) {
+                setClosedByDbLabel(null);
+                return;
+            }
+            try {
+                const u = await fetchUserListItemById(uid);
+                if (!cancelled) {
+                    setClosedByDbLabel(u ? u.name || u.login : null);
+                }
+            } catch {
+                if (!cancelled) {
+                    setClosedByDbLabel(null);
+                }
+            }
+        }
+        void resolveClosedByName();
+        return () => {
+            cancelled = true;
+        };
+    }, [request, noteParts.closedFromMeta]);
 
     async function trySync() {
         if (!id) {
@@ -152,12 +200,8 @@ export function RepairRequestDetailPage() {
     const apiSt = apiStatusFromUi(request.status);
     const canAct = apiSt !== 'closed';
     const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
-    const { resolutionBody, trackerClosedBy: trackerClosedByEmbedded } = splitResolutionNoteFromApi(
-        request.resolutionNote,
-    );
-    const resolutionNoteTrimmed = resolutionBody.trim();
-    const trackerClosedBy =
-        request.closedByTrackerDisplay?.trim() || trackerClosedByEmbedded;
+    const resolutionNoteTrimmed = noteParts.resolutionTrimmed;
+    const closedByDisplayed = noteParts.closedFromMeta || closedByDbLabel || '';
 
     return (
         <main className="page page--wide page--centered">
@@ -205,7 +249,7 @@ export function RepairRequestDetailPage() {
                         {apiSt === 'closed' ? (
                             <span className="repair-detail-status-kv repair-detail-status-kv--closed-by">
                                 <strong>Кем закрыт:</strong>{' '}
-                                <span>{trackerClosedBy || '—'}</span>
+                                <span>{closedByDisplayed || '—'}</span>
                             </span>
                         ) : null}
                     </p>
