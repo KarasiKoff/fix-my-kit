@@ -15,6 +15,7 @@ import { useToast } from '../context/ToastContext';
 import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 import { formatApiError } from '../utils/formatApiError';
+import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
 
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
     if (s === 'new') {
@@ -151,8 +152,12 @@ export function RepairRequestDetailPage() {
     const apiSt = apiStatusFromUi(request.status);
     const canAct = apiSt !== 'closed';
     const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
-    const resolutionText = request.resolutionNote?.trim() ? request.resolutionNote : '—';
-    const closedByText = request.closedByFullName?.trim() || request.closedByLogin?.trim() || '—';
+    const { resolutionBody, trackerClosedBy: trackerClosedByEmbedded } = splitResolutionNoteFromApi(
+        request.resolutionNote,
+    );
+    const resolutionNoteTrimmed = resolutionBody.trim();
+    const trackerClosedBy =
+        request.closedByTrackerDisplay?.trim() || trackerClosedByEmbedded;
 
     return (
         <main className="page page--wide page--centered">
@@ -181,13 +186,28 @@ export function RepairRequestDetailPage() {
                             <span className="badge danger">Нет в Трекере</span>
                         )}
                         <span className="repair-detail-status-inline-sep" aria-hidden="true" />
-                        <span className="repair-detail-status-kv">
+                        <span className="repair-detail-status-kv repair-detail-status-kv--resolution">
                             <strong>Резолюция:</strong>{' '}
-                            <span className="repair-detail-resolution-text">{resolutionText}</span>
+                            {resolutionNoteTrimmed ? (
+                                <span className="repair-detail-resolution-text">{resolutionNoteTrimmed}</span>
+                            ) : trackerHref ? (
+                                <span className="repair-detail-resolution-fallback muted-text">
+                                    В ответе заявки текста нет — смотрите поле резолюции в{' '}
+                                    <a href={trackerHref} target="_blank" rel="noreferrer">
+                                        задаче Трекера
+                                    </a>
+                                    .
+                                </span>
+                            ) : (
+                                <span>—</span>
+                            )}
                         </span>
-                        <span className="repair-detail-status-kv">
-                            <strong>Кем закрыт:</strong> {closedByText}
-                        </span>
+                        {apiSt === 'closed' ? (
+                            <span className="repair-detail-status-kv repair-detail-status-kv--closed-by">
+                                <strong>Кем закрыт:</strong>{' '}
+                                <span>{trackerClosedBy || '—'}</span>
+                            </span>
+                        ) : null}
                     </p>
                 </div>
                 <ul className="repair-detail-list">
@@ -228,13 +248,18 @@ export function RepairRequestDetailPage() {
                 </ul>
                 <div className="repair-detail-tracker-footer repair-detail-tracker-footer--row">
                     {trackerHref ? (
-                        <a href={trackerHref} target="_blank" rel="noreferrer" className="btn-primary btn-compact repair-sync-btn">
+                        <a
+                            href={trackerHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
+                        >
                             Перейти в Tracker
                         </a>
                     ) : (
                         <button
                             type="button"
-                            className="btn-ghost btn-compact repair-sync-btn"
+                            className="repair-tracker-footer-btn repair-tracker-footer-btn--muted"
                             disabled
                             title="Сначала синхронизируйте заявку — появится ссылка на тикет в Трекере"
                         >
@@ -242,7 +267,11 @@ export function RepairRequestDetailPage() {
                         </button>
                     )}
                     {!trackerHref ? (
-                        <button type="button" className="btn-primary btn-compact repair-sync-btn" onClick={() => void trySync()}>
+                        <button
+                            type="button"
+                            className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
+                            onClick={() => void trySync()}
+                        >
                             Синхронизировать с Трекером
                         </button>
                     ) : null}

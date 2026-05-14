@@ -15,6 +15,5 @@ export type RepairRequest = {
 export type RepairRequestDetail = RepairRequest & {
     resolutionNote?: string | null;
     closedAt?: string | null;
-    closedByLogin?: string | null;
-    closedByFullName?: string | null;
+    closedByTrackerDisplay?: string | null;
 };
