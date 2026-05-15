@@ -11,6 +11,7 @@ type DeviceApi = {
     audience?: { id: number; name: string } | null;
     responsible?: { id: string; full_name?: string | null; login: string } | null;
     repair_status: Device['status'];
+    taken_by_sysadmin?: boolean;
 };
 
 export function mapDevice(item: DeviceApi): Device {
@@ -26,7 +27,7 @@ export function mapDevice(item: DeviceApi): Device {
         responsible: item.responsible?.full_name ?? item.responsible?.login ?? '',
         responsibleId: item.responsible?.id ?? null,
         status: item.repair_status,
-        takenBySysadmin: item.repair_status === 'in_repair',
+        takenBySysadmin: item.taken_by_sysadmin ?? item.repair_status === 'in_repair',
     };
 }
 
@@ -38,6 +39,8 @@ type HistoryApi = {
     new_status?: string | null;
     note?: string | null;
     created_at: string;
+    tracker_ticket_key?: string | null;
+    tracker_ticket_url?: string | null;
 };
 
 function mapHistoryRow(item: HistoryApi): RepairHistoryEntry {
@@ -49,6 +52,8 @@ function mapHistoryRow(item: HistoryApi): RepairHistoryEntry {
         newStatus: (item.new_status as RepairHistoryEntry['newStatus']) ?? undefined,
         note: item.note ?? undefined,
         createdAt: item.created_at,
+        trackerTicketKey: item.tracker_ticket_key ?? undefined,
+        trackerTicketUrl: item.tracker_ticket_url ?? undefined,
     };
 }
 

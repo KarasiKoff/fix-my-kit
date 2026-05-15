@@ -3,16 +3,18 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from backend.app.api.deps import get_db, require_roles
 from backend.app.core.config import settings
 from backend.app.models.device import Device as DeviceModel
-from backend.app.models.enums import RepairStatus, UserRole
+from backend.app.models.enums import RepairStatus, RequestStatus, UserRole
 from backend.app.models.repair_history import RepairHistory
+from backend.app.models.repair_request import RepairRequest
 from backend.app.schemas.device import Device, DeviceCreate, DeviceDetail, DeviceHistoryResponse, DeviceListResponse, DeviceQrResponse, DeviceUpdate
+from backend.app.schemas.repair_history import RepairHistoryResponse
 from backend.app.schemas.suggest import SuggestResponse
-from backend.app.services.device_list_query import DeviceSortBy, SortDir, fetch_devices_page, suggest_devices
+from backend.app.services.device_list_query import fetch_devices_page, suggest_devices
 from backend.app.services.repair_history_service import add_repair_history
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
@@ -28,9 +30,25 @@ _DEVICE_SORT_FIELDS: set[str] = {
 _DEVICE_SUGGEST_FIELDS: set[str] = {"inventory_number", "name", "category", "room", "responsible"}
 
 
-def _device_base_query(db: Session):
-    from sqlalchemy.orm import joinedload
+def _taken_by_sysadmin_for_device(db: Session, device_id: UUID) -> bool:
+    request = (
+        db.query(RepairRequest)
+        .filter(RepairRequest.device_id == device_id, RepairRequest.status != RequestStatus.CLOSED)
+        .order_by(RepairRequest.created_at.desc())
+        .first()
+    )
+    return request is not None and request.taken_by_sysadmin_at is not None
 
+
+def _to_device_detail(db: Session, device: DeviceModel) -> DeviceDetail:
+    base = Device.model_validate(device)
+    return DeviceDetail(
+        **base.model_dump(),
+        taken_by_sysadmin=_taken_by_sysadmin_for_device(db, device.id),
+    )
+
+
+def _device_base_query(db: Session):
     return db.query(DeviceModel).options(
         joinedload(DeviceModel.category),
         joinedload(DeviceModel.audience),
@@ -119,7 +137,7 @@ def get_device(device_id: UUID, db: Session = Depends(get_db)) -> DeviceDetail:
     device = _device_base_query(db).filter(DeviceModel.id == device_id).first()
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
-    return DeviceDetail.model_validate(device)
+    return _to_device_detail(db, device)
 
 
 @router.patch(
@@ -156,7 +174,7 @@ def patch_device(device_id: UUID, payload: DeviceUpdate, db: Session = Depends(g
     refreshed = _device_base_query(db).filter(DeviceModel.id == device_id).first()
     if refreshed is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
-    return DeviceDetail.model_validate(refreshed)
+    return _to_device_detail(db, refreshed)
 
 
 @router.get(
@@ -182,10 +200,25 @@ def get_device_history(device_id: UUID, db: Session = Depends(get_db)) -> Device
     if exists is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
 
-    items = (
+    rows = (
         db.query(RepairHistory)
+        .options(joinedload(RepairHistory.repair_request))
         .filter(RepairHistory.device_id == device_id)
         .order_by(RepairHistory.created_at.desc())
         .all()
     )
+    items = [
+        RepairHistoryResponse(
+            id=row.id,
+            device_id=row.device_id,
+            repair_request_id=row.repair_request_id,
+            old_status=row.old_status,
+            new_status=row.new_status,
+            note=row.note,
+            created_at=row.created_at,
+            tracker_ticket_key=row.repair_request.tracker_ticket_key if row.repair_request else None,
+            tracker_ticket_url=row.repair_request.tracker_ticket_url if row.repair_request else None,
+        )
+        for row in rows
+    ]
     return DeviceHistoryResponse(items=items)

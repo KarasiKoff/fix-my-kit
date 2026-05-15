@@ -46,7 +46,7 @@ class Device(DeviceBase):
 
 
 class DeviceDetail(Device):
-    pass
+    taken_by_sysadmin: bool = False
 
 
 class DeviceListResponse(BaseModel):
