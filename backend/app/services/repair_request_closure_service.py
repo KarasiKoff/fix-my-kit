@@ -12,13 +12,18 @@ from backend.app.services.repair_history_service import add_repair_history
 
 
 def apply_closed_fields(
-    repair_request: RepairRequest, closed_by: User, resolution_note: str | None = None
+    repair_request: RepairRequest,
+    closed_by: User,
+    resolution_note: str | None = None,
+    resolution_desc: str | None = None,
 ) -> None:
     repair_request.status = RequestStatus.CLOSED
     repair_request.closed_at = datetime.now(timezone.utc)
     repair_request.closed_by_user_id = closed_by.id
     if resolution_note is not None:
         repair_request.resolution_note = resolution_note
+    if resolution_desc is not None:
+        repair_request.resolution_desc = resolution_desc
 
 
 def record_repair_request_closed(
@@ -26,10 +31,11 @@ def record_repair_request_closed(
     repair_request: RepairRequest,
     closed_by: User,
     resolution_note: str | None,
+    resolution_desc: str | None = None,
 ) -> None:
     device = db.query(Device).filter(Device.id == repair_request.device_id).first()
     old_rs = device.repair_status if device else None
-    apply_closed_fields(repair_request, closed_by, resolution_note)
+    apply_closed_fields(repair_request, closed_by, resolution_note, resolution_desc)
     if device is not None:
         device.repair_status = RepairStatus.NOT_IN_REPAIR
         add_repair_history(

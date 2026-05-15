@@ -23,6 +23,7 @@ class RepairRequest(Base):
     status = Column(SQLEnum(RequestStatus, name="request_status"), nullable=False, default=RequestStatus.OPEN)
     taken_by_sysadmin_at = Column(TIMESTAMP(timezone=True), nullable=True)
     resolution_note = Column(Text, nullable=True)
+    resolution_desc = Column(Text, nullable=True)
     closed_at = Column(TIMESTAMP(timezone=True), nullable=True)
     tracker_ticket_id = Column(String, nullable=True)
     tracker_ticket_key = Column(String, nullable=True)
