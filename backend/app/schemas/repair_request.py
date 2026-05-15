@@ -24,6 +24,7 @@ class PublicRepairRequestCreate(RepairRequestBase):
 class RepairRequestStatusUpdate(BaseModel):
     status: RequestStatus
     resolution_note: str | None = None
+    resolution_desc: str | None = None
 
 
 class RepairRequestTake(BaseModel):
@@ -32,12 +33,14 @@ class RepairRequestTake(BaseModel):
 
 class RepairRequestClose(BaseModel):
     resolution_note: str | None = None
+    resolution_desc: str | None = None
 
 
 class RepairRequestUpdate(BaseModel):
     description: str | None = None
     status: RequestStatus | None = None
     resolution_note: str | None = None
+    resolution_desc: str | None = None
     taken_by_sysadmin_by_user_id: UUID | None = None
     taken_by_sysadmin_at: datetime | None = None
 
@@ -52,6 +55,7 @@ class RepairRequestResponse(RepairRequestBase):
     status: RequestStatus
     taken_by_sysadmin_at: datetime | None = None
     resolution_note: str | None = None
+    resolution_desc: str | None = None
     closed_at: datetime | None = None
     tracker_ticket_id: str | None = None
     tracker_ticket_key: str | None = None

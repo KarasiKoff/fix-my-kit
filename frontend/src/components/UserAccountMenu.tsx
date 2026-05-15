@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import avatarImg from '../icon/account-avatar.svg';
 
@@ -54,16 +55,26 @@ export function UserAccountMenu() {
                             {roleLabel}
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        className="btn-ghost btn-compact topbar-account-signout"
-                        onClick={() => {
-                            setOpen(false);
-                            signOut();
-                        }}
-                    >
-                        Выйти
-                    </button>
+                    <div className="topbar-account-actions">
+                        <NavLink
+                            to="/admin/password"
+                            className="btn-ghost btn-compact topbar-account-action"
+                            role="menuitem"
+                            onClick={() => setOpen(false)}
+                        >
+                            Сменить пароль
+                        </NavLink>
+                        <button
+                            type="button"
+                            className="btn-ghost btn-compact topbar-account-action"
+                            onClick={() => {
+                                setOpen(false);
+                                signOut();
+                            }}
+                        >
+                            Выйти
+                        </button>
+                    </div>
                 </div>
             ) : null}
         </div>

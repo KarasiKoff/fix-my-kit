@@ -67,7 +67,7 @@ export async function createRepairRequest(payload: {
             method: 'POST',
             body: JSON.stringify({
                 device_id: payload.deviceId,
-                applicant_name: payload.requesterName,
+                applicant_name: payload.requesterName?.trim() || null,
                 description: payload.description,
                 sync_to_tracker: payload.syncToTracker ?? true,
             }),
