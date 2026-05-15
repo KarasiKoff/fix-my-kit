@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class YandexTrackerWebhookPayload(BaseModel):
@@ -14,7 +14,13 @@ class YandexTrackerWebhookPayload(BaseModel):
         description="Id задачи в Yandex Tracker",
     )
     resolution: str | None = Field(
-        default=None, description="Текст резолюции / комментарий"
+        default=None,
+        description="Резолюция из Трекера ({{issue.resolution}})",
+    )
+    resolution_desc: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("resolution_desc", "resolution_comment"),
+        description="Комментарий при переходе ({{userComment.text}})",
     )
     tracker_status: str | None = Field(
         default=None,
@@ -31,6 +37,14 @@ class YandexTrackerWebhookPayload(BaseModel):
     @field_validator("issue_id", mode="before")
     @classmethod
     def issue_id_as_str(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s or None
+
+    @field_validator("resolution", "resolution_desc", mode="before")
+    @classmethod
+    def empty_text_as_none(cls, v: object) -> str | None:
         if v is None:
             return None
         s = str(v).strip()
