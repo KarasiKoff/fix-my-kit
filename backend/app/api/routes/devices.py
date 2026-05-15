@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -12,9 +13,21 @@ from backend.app.models.repair_history import RepairHistory
 from backend.app.models.repair_request import RepairRequest
 from backend.app.schemas.device import Device, DeviceCreate, DeviceDetail, DeviceHistoryResponse, DeviceListResponse, DeviceQrResponse, DeviceUpdate
 from backend.app.schemas.repair_history import RepairHistoryResponse
+from backend.app.schemas.suggest import SuggestResponse
+from backend.app.services.device_list_query import fetch_devices_page, suggest_devices
 from backend.app.services.repair_history_service import add_repair_history
 
 router = APIRouter(prefix="/api/devices", tags=["devices"])
+
+_DEVICE_SORT_FIELDS: set[str] = {
+    "inventory_number",
+    "name",
+    "category_name",
+    "audience_name",
+    "responsible_name",
+    "repair_status",
+}
+_DEVICE_SUGGEST_FIELDS: set[str] = {"inventory_number", "name", "category", "room", "responsible"}
 
 
 def _taken_by_sysadmin_for_device(db: Session, device_id: UUID) -> bool:
@@ -44,39 +57,53 @@ def _device_base_query(db: Session):
 
 
 @router.get(
+    "/suggest",
+    response_model=SuggestResponse,
+    dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.SYSADMIN))],
+)
+def device_suggest(
+    field: str = Query(...),
+    q: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+) -> SuggestResponse:
+    if field not in _DEVICE_SUGGEST_FIELDS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_suggest_field")
+    return SuggestResponse(items=suggest_devices(db, field, q))
+
+
+@router.get(
     "",
     response_model=DeviceListResponse,
     dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.SYSADMIN))],
 )
 def list_devices(
     inventory_number: str | None = Query(default=None),
-    category_id: UUID | None = Query(default=None),
-    audience_id: int | None = Query(default=None),
-    responsible_id: UUID | None = Query(default=None),
+    name: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    room: str | None = Query(default=None),
+    responsible: str | None = Query(default=None),
     repair_status: RepairStatus | None = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
+    sort_by: str = Query(default="inventory_number"),
+    sort_dir: Literal["asc", "desc"] = Query(default="asc"),
+    limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> DeviceListResponse:
-    query = _device_base_query(db)
+    if sort_by not in _DEVICE_SORT_FIELDS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_sort_by")
 
-    if inventory_number is not None:
-        query = query.filter(DeviceModel.inventory_number.ilike(f"%{inventory_number}%"))
-    if category_id is not None:
-        query = query.filter(DeviceModel.category_id == category_id)
-    if audience_id is not None:
-        query = query.filter(DeviceModel.audience_id == audience_id)
-    if responsible_id is not None:
-        query = query.filter(DeviceModel.responsible_id == responsible_id)
-    if repair_status is not None:
-        query = query.filter(DeviceModel.repair_status == repair_status)
-
-    total = query.count()
-    items = (
-        query.order_by(DeviceModel.audience_id, DeviceModel.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
+    items, total = fetch_devices_page(
+        db,
+        inventory_number=inventory_number,
+        name=name,
+        category=category,
+        room=room,
+        responsible=responsible,
+        repair_status=repair_status,
+        sort_by=sort_by,  # type: ignore[arg-type]
+        sort_dir=sort_dir,
+        limit=limit,
+        offset=offset,
     )
     return DeviceListResponse(items=[Device.model_validate(item) for item in items], total=total)
 

@@ -2501,3 +2501,199 @@ tbody tr:hover {
     padding: 11px 8px;
   }
 }
+
+/* —— List filters, sort, pagination —— */
+.grid-filters {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.grid-filters--3 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.filter-combobox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-combobox-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.filter-combobox-input,
+.filter-select-field select {
+  width: 100%;
+  padding: var(--control-padding-y) var(--control-padding-x);
+  font-size: var(--control-font);
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.filter-select-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-combobox-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.filter-combobox-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.filter-combobox-list button:hover,
+.filter-combobox-list button.is-active {
+  background: var(--nav-active-bg);
+}
+
+.filter-combobox-hint {
+  position: absolute;
+  right: 12px;
+  top: 2.1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.sortable-th-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sortable-th-btn:hover {
+  color: var(--accent);
+}
+
+.sortable-th-arrow {
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+
+.list-pagination {
+  position: relative;
+  margin: 16px 0;
+  padding: 12px 16px;
+  min-height: 52px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+
+.list-pagination__content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+}
+
+.list-pagination--loading .list-pagination__content {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.list-pagination__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.list-pagination__spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-subtle);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: list-pagination-spin 0.75s linear infinite;
+}
+
+@keyframes list-pagination-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.list-pagination-size {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.list-pagination-size select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.list-pagination-status {
+  flex: 1;
+  min-width: 140px;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.list-pagination-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-hint {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+

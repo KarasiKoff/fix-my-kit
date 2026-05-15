@@ -1,52 +1,121 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppData } from '../context/AppDataContext';
+import { DeviceSuggestField, fetchDevices, suggestDevices } from '../api/devices';
+import { FilterCombobox } from '../components/FilterCombobox';
+import { ListPagination } from '../components/ListPagination';
 import { QrSheetSettingsModal } from '../components/QrSheetSettingsModal';
+import { SortableTh } from '../components/SortableTh';
+import { Device } from '../types/device';
+import type { DeviceSortBy, PageSize, SortDir } from '../types/listQuery';
 import { deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
+import { formatApiError } from '../utils/formatApiError';
+import { filtersEqual } from '../utils/filtersMatch';
+
+type DeviceFilters = {
+    inventoryNumber: string;
+    name: string;
+    category: string;
+    room: string;
+    responsible: string;
+    status: '' | Device['status'];
+};
+
+const DEFAULT_SORT: DeviceSortBy = 'inventory_number';
+const DEFAULT_DIR: SortDir = 'asc';
+
+const EMPTY_FILTERS: DeviceFilters = {
+    inventoryNumber: '',
+    name: '',
+    category: '',
+    room: '',
+    responsible: '',
+    status: '',
+};
 
 export function DevicesList() {
     const navigate = useNavigate();
-    const { devices, isLoading, error } = useAppData();
+    const [items, setItems] = useState<Device[]>([]);
+    const [total, setTotal] = useState(0);
+    const [fetching, setFetching] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<PageSize>(20);
+    const [sortBy, setSortBy] = useState<DeviceSortBy>(DEFAULT_SORT);
+    const [sortDir, setSortDir] = useState<SortDir>(DEFAULT_DIR);
+    const [draftFilters, setDraftFilters] = useState<DeviceFilters>(EMPTY_FILTERS);
+    const [appliedFilters, setAppliedFilters] = useState<DeviceFilters>(EMPTY_FILTERS);
     const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
     const [sheetModalOpen, setSheetModalOpen] = useState(false);
-    const [filters, setFilters] = useState({
-        inventoryNumber: '',
-        category: '',
-        room: '',
-        responsible: '',
-        status: '',
-    });
 
-    const filteredDevices = devices.filter((device) => {
-        const byInventory = device.inventoryNumber.toLowerCase().includes(filters.inventoryNumber.toLowerCase());
-        const byCategory = device.category.toLowerCase().includes(filters.category.toLowerCase());
-        const byRoom = device.room.toLowerCase().includes(filters.room.toLowerCase());
-        const byResponsible = device.responsible.toLowerCase().includes(filters.responsible.toLowerCase());
-        const byStatus = filters.status === '' || device.status === filters.status;
-        return byInventory && byCategory && byRoom && byResponsible && byStatus;
-    });
+    const applyFilters = useCallback(() => {
+        setAppliedFilters({ ...draftFilters });
+        setPage(1);
+    }, [draftFilters]);
 
-    const selectedDevicesList = useMemo(
-        () => filteredDevices.filter((d) => selectedDevices.has(d.id)),
-        [filteredDevices, selectedDevices],
-    );
+    const load = useCallback(async () => {
+        setFetching(true);
+        setError(null);
+        try {
+            const result = await fetchDevices({
+                inventory_number: appliedFilters.inventoryNumber || undefined,
+                name: appliedFilters.name || undefined,
+                category: appliedFilters.category || undefined,
+                room: appliedFilters.room || undefined,
+                responsible: appliedFilters.responsible || undefined,
+                repair_status: appliedFilters.status || undefined,
+                sort_by: sortBy,
+                sort_dir: sortDir,
+                limit: pageSize,
+                offset: (page - 1) * pageSize,
+            });
+            setItems(result.items);
+            setTotal(result.total);
+        } catch (err) {
+            setError(formatApiError(err));
+        } finally {
+            setFetching(false);
+        }
+    }, [appliedFilters, page, pageSize, sortBy, sortDir]);
+
+    useEffect(() => {
+        void load();
+    }, [load]);
+
+    const suggest = useCallback((field: DeviceSuggestField) => {
+        return (query: string) => suggestDevices(field, query);
+    }, []);
+
+    function handleSort(key: string) {
+        const col = key as DeviceSortBy;
+        setPage(1);
+        if (sortBy === col) {
+            setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortBy(col);
+            setSortDir('asc');
+        }
+    }
+
+    const filtersPending = !filtersEqual(draftFilters, appliedFilters);
+
+    const selectedDevicesList = useMemo(() => items.filter((d) => selectedDevices.has(d.id)), [items, selectedDevices]);
 
     const handleSelectAll = () => {
-        if (selectedDevices.size === filteredDevices.length) {
+        if (selectedDevices.size === items.length) {
             setSelectedDevices(new Set());
         } else {
-            setSelectedDevices(new Set(filteredDevices.map((d) => d.id)));
+            setSelectedDevices(new Set(items.map((d) => d.id)));
         }
     };
 
     const handleSelectDevice = (id: string) => {
-        const newSelected = new Set(selectedDevices);
-        if (newSelected.has(id)) {
-            newSelected.delete(id);
+        const next = new Set(selectedDevices);
+        if (next.has(id)) {
+            next.delete(id);
         } else {
-            newSelected.add(id);
+            next.add(id);
         }
-        setSelectedDevices(newSelected);
+        setSelectedDevices(next);
     };
 
     function openDevice(id: string) {
@@ -56,41 +125,80 @@ export function DevicesList() {
     return (
         <main className="page">
             <h2>Список устройств</h2>
-            {isLoading && <p>Загрузка...</p>}
             {error && <p className="error-text">{error}</p>}
             <section className="card">
                 <h3>Поиск и фильтрация</h3>
-                <div className="grid grid-5">
-                    <input
+                <p className="filter-hint">
+                    Поиск по части текста (например, «303» найдёт 303-1 и 303-GIFD). Инв. номер ищет также в названии.
+                </p>
+                <div className="grid grid-filters">
+                    <FilterCombobox
+                        label="Инв. номер"
+                        value={draftFilters.inventoryNumber}
                         placeholder="Инвентарный номер"
-                        value={filters.inventoryNumber}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, inventoryNumber: event.target.value }))}
+                        onChange={(v) => setDraftFilters((p) => ({ ...p, inventoryNumber: v }))}
+                        fetchSuggestions={suggest('inventory_number')}
                     />
-                    <input
+                    <FilterCombobox
+                        label="Название"
+                        value={draftFilters.name}
+                        placeholder="Название устройства"
+                        onChange={(v) => setDraftFilters((p) => ({ ...p, name: v }))}
+                        fetchSuggestions={suggest('name')}
+                    />
+                    <FilterCombobox
+                        label="Категория"
+                        value={draftFilters.category}
                         placeholder="Категория"
-                        value={filters.category}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))}
+                        onChange={(v) => setDraftFilters((p) => ({ ...p, category: v }))}
+                        fetchSuggestions={suggest('category')}
                     />
-                    <input
+                    <FilterCombobox
+                        label="Кабинет"
+                        value={draftFilters.room}
                         placeholder="Кабинет"
-                        value={filters.room}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, room: event.target.value }))}
+                        onChange={(v) => setDraftFilters((p) => ({ ...p, room: v }))}
+                        fetchSuggestions={suggest('room')}
                     />
-                    <input
-                        placeholder="Ответственный"
-                        value={filters.responsible}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, responsible: event.target.value }))}
+                    <FilterCombobox
+                        label="Ответственный"
+                        value={draftFilters.responsible}
+                        placeholder="ФИО или логин"
+                        onChange={(v) => setDraftFilters((p) => ({ ...p, responsible: v }))}
+                        fetchSuggestions={suggest('responsible')}
                     />
-                    <select
-                        value={filters.status}
-                        onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
-                    >
-                        <option value="">Любой статус</option>
-                        <option value="not_in_repair">{deviceRepairStatusLabel('not_in_repair')}</option>
-                        <option value="in_repair">{deviceRepairStatusLabel('in_repair')}</option>
-                    </select>
+                    <label className="filter-select-field">
+                        Статус
+                        <select
+                            value={draftFilters.status}
+                            onChange={(event) =>
+                                setDraftFilters((p) => ({ ...p, status: event.target.value as DeviceFilters['status'] }))
+                            }
+                        >
+                            <option value="">Любой статус</option>
+                            <option value="not_in_repair">{deviceRepairStatusLabel('not_in_repair')}</option>
+                            <option value="in_repair">{deviceRepairStatusLabel('in_repair')}</option>
+                        </select>
+                    </label>
+                </div>
+                <div className="filter-actions">
+                    <button type="button" className="btn-primary" disabled={!filtersPending} onClick={applyFilters}>
+                        Применить фильтры
+                    </button>
                 </div>
             </section>
+
+            <ListPagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                loading={fetching}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(1);
+                }}
+            />
 
             {selectedDevices.size > 0 && (
                 <section className="card">
@@ -104,7 +212,7 @@ export function DevicesList() {
             )}
 
             <section className="card">
-                <h3>Оборудование ({filteredDevices.length})</h3>
+                <h3>Оборудование ({total})</h3>
                 <div className="table-wrap">
                     <table className="requests-table">
                         <thead>
@@ -112,21 +220,63 @@ export function DevicesList() {
                                 <th className="table-col-center">
                                     <input
                                         type="checkbox"
-                                        checked={selectedDevices.size === filteredDevices.length && filteredDevices.length > 0}
+                                        checked={selectedDevices.size === items.length && items.length > 0}
                                         onChange={handleSelectAll}
                                     />
                                 </th>
-                                <th className="table-col-center">Инв. номер</th>
-                                <th className="table-col-center">Название</th>
-                                <th className="table-col-center">Категория</th>
-                                <th className="table-col-center">Кабинет</th>
-                                <th className="table-col-center">Ответственный</th>
-                                <th className="table-col-center">Статус</th>
+                                <SortableTh
+                                    label="Инв. номер"
+                                    sortKey="inventory_number"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Название"
+                                    sortKey="name"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Категория"
+                                    sortKey="category_name"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Кабинет"
+                                    sortKey="audience_name"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Ответственный"
+                                    sortKey="responsible_name"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Статус"
+                                    sortKey="repair_status"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
                                 <th className="table-col-center">Карточка</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredDevices.map((device) => (
+                            {items.map((device) => (
                                 <tr
                                     key={device.id}
                                     className="requests-row-clickable"
@@ -139,10 +289,7 @@ export function DevicesList() {
                                         }
                                     }}
                                 >
-                                    <td
-                                        className="table-col-center"
-                                        onClick={(event) => event.stopPropagation()}
-                                    >
+                                    <td className="table-col-center" onClick={(event) => event.stopPropagation()}>
                                         <input
                                             type="checkbox"
                                             checked={selectedDevices.has(device.id)}
@@ -155,7 +302,9 @@ export function DevicesList() {
                                     <td className="table-col-center">{device.room}</td>
                                     <td className="table-col-center">{device.responsible}</td>
                                     <td className="status-cell table-col-center">
-                                        <span className={deviceRepairStatusPillClass(device.status)}>{deviceRepairStatusLabel(device.status)}</span>
+                                        <span className={deviceRepairStatusPillClass(device.status)}>
+                                            {deviceRepairStatusLabel(device.status)}
+                                        </span>
                                     </td>
                                     <td
                                         className="table-col-center requests-row-actions-cell"

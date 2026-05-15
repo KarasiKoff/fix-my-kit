@@ -18,6 +18,8 @@ type RepairRequestApi = {
     closed_at?: string | null;
     closed_by_user_id?: string | null;
     closed_by_tracker_display?: string | null;
+    device_inventory_number?: string | null;
+    device_name?: string | null;
 };
 
 function mapRepairRequest(item: RepairRequestApi): RepairRequest {
@@ -33,6 +35,8 @@ function mapRepairRequest(item: RepairRequestApi): RepairRequest {
         ticketKey: item.tracker_ticket_key ?? undefined,
         ticketUrl: item.tracker_ticket_url ?? undefined,
         lastSyncedAt: item.last_sync_at ?? undefined,
+        deviceInventoryNumber: item.device_inventory_number ?? undefined,
+        deviceName: item.device_name ?? undefined,
     };
 }
 
@@ -103,9 +107,47 @@ export async function createRepairRequest(payload: {
     });
 }
 
-export async function fetchRepairRequests() {
-    const response = await apiRequest<{ items: RepairRequestApi[]; total: number }>('/api/repair-requests');
-    return response.items.map(mapRepairRequest);
+export type RepairRequestListParams = {
+    device?: string;
+    applicant?: string;
+    status?: 'open' | 'in_progress' | 'closed';
+    sort_by?: string;
+    sort_dir?: 'asc' | 'desc';
+    limit?: number;
+    offset?: number;
+};
+
+function buildRepairRequestQuery(params: Record<string, string | number | undefined>): string {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== '') {
+            search.set(key, String(value));
+        }
+    }
+    const q = search.toString();
+    return q ? `?${q}` : '';
+}
+
+export async function fetchRepairRequests(params?: RepairRequestListParams) {
+    const query = buildRepairRequestQuery({
+        device: params?.device,
+        applicant: params?.applicant,
+        status: params?.status,
+        sort_by: params?.sort_by,
+        sort_dir: params?.sort_dir,
+        limit: params?.limit ?? 50,
+        offset: params?.offset ?? 0,
+    });
+    const response = await apiRequest<{ items: RepairRequestApi[]; total: number }>(`/api/repair-requests${query}`);
+    return { items: response.items.map(mapRepairRequest), total: response.total };
+}
+
+export type RepairRequestSuggestField = 'device' | 'applicant';
+
+export async function suggestRepairRequests(field: RepairRequestSuggestField, q: string) {
+    const params = new URLSearchParams({ field, q });
+    const response = await apiRequest<{ items: string[] }>(`/api/repair-requests/suggest?${params.toString()}`);
+    return response.items;
 }
 
 export async function fetchRepairRequest(id: string) {
