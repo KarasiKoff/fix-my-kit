@@ -12,7 +12,11 @@ import {
 import { Device } from '../types/device';
 import { RepairRequestDetail } from '../types/repairRequest';
 import { useToast } from '../context/ToastContext';
-import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
+import {
+    repairRequestStatusLabel,
+    repairRequestStatusPillClass,
+    repairRequestWorkflowBubble,
+} from '../utils/statusDisplay';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 import { formatApiError } from '../utils/formatApiError';
 import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
@@ -203,6 +207,7 @@ export function RepairRequestDetailPage() {
     const resolutionNoteTrimmed = noteParts.resolutionTrimmed;
     const resolutionDescTrimmed = request.resolutionDesc?.trim() ?? '';
     const closedByDisplayed = noteParts.closedFromMeta || closedByDbLabel || '';
+    const workflowBubble = repairRequestWorkflowBubble(request.status);
 
     return (
         <main className="page page--wide page--centered">
@@ -230,9 +235,9 @@ export function RepairRequestDetailPage() {
                         ) : (
                             <span className="badge danger">Нет в Трекере</span>
                         )}
-                        {request.takenBySysadmin ? (
-                            <span className="status-pill status-pill--request-progress" title="Устройство забрал сисадмин">
-                                В работе
+                        {workflowBubble ? (
+                            <span className={workflowBubble.className} title={workflowBubble.label}>
+                                {workflowBubble.label}
                             </span>
                         ) : null}
                         <span className="repair-detail-status-inline-sep" aria-hidden="true" />
