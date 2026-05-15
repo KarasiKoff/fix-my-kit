@@ -231,7 +231,7 @@ export function AdminUsersPanel() {
                                 <th className="table-col-center">Роль</th>
                                 <th className="table-col-center">Статус</th>
                                 <th className="table-col-center">Создан</th>
-                                <th className="table-col-center table-col--narrow">Действия</th>
+                                <th className="table-col-center table-col-actions">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -249,7 +249,15 @@ export function AdminUsersPanel() {
                                 </tr>
                             ) : (
                                 filtered.map((u) => (
-                                    <tr key={u.id} className={!u.isActive ? 'row-disabled' : undefined}>
+                                    <tr
+                                        key={u.id}
+                                        className={[
+                                            !u.isActive ? 'row-disabled' : '',
+                                            editingId === u.id ? 'admin-table-row--editing' : '',
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ') || undefined}
+                                    >
                                         <td className="table-col-center">{u.login}</td>
                                         <td className="table-col-center admin-table-cell--input">
                                             {editingId === u.id ? (
@@ -293,36 +301,40 @@ export function AdminUsersPanel() {
                                                 {u.isActive ? 'активен' : 'отключён'}
                                             </span>
                                         </td>
-                                        <td className="table-col-center">{new Date(u.createdAt).toLocaleString('ru-RU')}</td>
-                                        <td className="admin-row-actions table-col-center">
-                                            {editingId === u.id ? (
-                                                <>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
-                                                        Сохранить
-                                                    </button>
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={() => setEditingId(null)}>
-                                                        Отмена
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(u)}>
-                                                        Изменить
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="btn-ghost btn-compact"
-                                                        disabled={!isAdmin || (isCurrentUser(u) && u.isActive)}
-                                                        title={isCurrentUser(u) && u.isActive ? 'Нельзя отключить свою учётную запись' : undefined}
-                                                        onClick={() => void toggleActive(u)}
-                                                    >
-                                                        {u.isActive ? 'Отключить' : 'Включить'}
-                                                    </button>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => setResetUserId(u.id)}>
-                                                        Сброс пароля
-                                                    </button>
-                                                </>
-                                            )}
+                                        <td className="table-col-center table-col--nowrap">
+                                            {new Date(u.createdAt).toLocaleString('ru-RU')}
+                                        </td>
+                                        <td className="table-col-center table-col-actions">
+                                            <div className="admin-row-actions">
+                                                {editingId === u.id ? (
+                                                    <>
+                                                        <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
+                                                            Сохранить
+                                                        </button>
+                                                        <button type="button" className="btn-ghost btn-compact" onClick={() => setEditingId(null)}>
+                                                            Отмена
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(u)}>
+                                                            Изменить
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-ghost btn-compact"
+                                                            disabled={!isAdmin || (isCurrentUser(u) && u.isActive)}
+                                                            title={isCurrentUser(u) && u.isActive ? 'Нельзя отключить свою учётную запись' : undefined}
+                                                            onClick={() => void toggleActive(u)}
+                                                        >
+                                                            {u.isActive ? 'Отключить' : 'Включить'}
+                                                        </button>
+                                                        <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => setResetUserId(u.id)}>
+                                                            Сброс пароля
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
