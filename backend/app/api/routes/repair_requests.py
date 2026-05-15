@@ -229,11 +229,19 @@ def update_repair_request_status(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="invalid_status_transition")
 
     if payload.status == RequestStatus.CLOSED:
-        record_repair_request_closed(db, repair_request, current_user, payload.resolution_note)
+        record_repair_request_closed(
+            db,
+            repair_request,
+            current_user,
+            payload.resolution_note,
+            payload.resolution_desc,
+        )
     else:
         repair_request.status = payload.status
         if payload.resolution_note is not None:
             repair_request.resolution_note = payload.resolution_note
+        if payload.resolution_desc is not None:
+            repair_request.resolution_desc = payload.resolution_desc
         add_repair_history(
             db,
             device_id=repair_request.device_id,
@@ -284,7 +292,13 @@ def close_repair_request(
     if RequestStatus.CLOSED not in ALLOWED_STATUS_TRANSITIONS[repair_request.status]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="invalid_status_transition")
 
-    record_repair_request_closed(db, repair_request, current_user, payload.resolution_note)
+    record_repair_request_closed(
+        db,
+        repair_request,
+        current_user,
+        payload.resolution_note,
+        payload.resolution_desc,
+    )
     db.commit()
     db.refresh(repair_request)
     return RepairRequestDetail.model_validate(repair_request)
