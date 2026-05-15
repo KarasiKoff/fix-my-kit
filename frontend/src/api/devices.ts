@@ -119,3 +119,7 @@ export async function updateDeviceStatus(id: string, status: Device['status']) {
         }),
     );
 }
+
+export async function deleteDevice(id: string) {
+    await apiRequest<void>(`/api/devices/${id}`, { method: 'DELETE' });
+}

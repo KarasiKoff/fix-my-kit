@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { fetchDevices, updateDeviceStatus } from '../api/devices';
+import { deleteDevice, fetchDevices, updateDeviceStatus } from '../api/devices';
 import { createRepairRequest as createRepairRequestApi, fetchRepairRequests } from '../api/repairRequests';
 import { Device } from '../types/device';
 import { RepairRequest } from '../types/repairRequest';
@@ -21,6 +21,7 @@ type AppDataContextValue = {
     refresh: () => Promise<void>;
     createRepairRequest: (payload: NewRequestPayload) => Promise<void>;
     setDeviceStatus: (deviceId: string, status: Device['status'], note?: string) => Promise<void>;
+    removeDevice: (deviceId: string) => Promise<void>;
     getDeviceById: (id: string) => Device | undefined;
 };
 
@@ -93,6 +94,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         await refresh();
     }, [refresh]);
 
+    const removeDevice = useCallback(async (deviceId: string) => {
+        await deleteDevice(deviceId);
+        setDevices((current) => current.filter((item) => item.id !== deviceId));
+        setRepairRequests((current) => current.filter((item) => item.deviceId !== deviceId));
+    }, []);
+
     const value = useMemo(
         () => ({
             devices,
@@ -102,9 +109,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             refresh,
             createRepairRequest,
             setDeviceStatus,
+            removeDevice,
             getDeviceById,
         }),
-        [devices, repairRequests, isLoading, error, refresh, createRepairRequest, setDeviceStatus, getDeviceById],
+        [devices, repairRequests, isLoading, error, refresh, createRepairRequest, setDeviceStatus, removeDevice, getDeviceById],
     );
 
     return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

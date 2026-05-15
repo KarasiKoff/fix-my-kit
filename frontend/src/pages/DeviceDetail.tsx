@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchDeviceById, fetchDeviceHistory } from '../api/devices';
 import { Device } from '../types/device';
 import { RepairHistoryEntry } from '../types/repairHistory';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useAppData } from '../context/AppDataContext';
 import { useToast } from '../context/ToastContext';
 import { deviceHistoryStatusLabel, deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 import { formatApiError } from '../utils/formatApiError';
@@ -181,10 +183,14 @@ function DeviceMetaItem({ icon, label, value }: DeviceMetaItemProps) {
 
 export function DeviceDetail() {
     const { id } = useParams();
-    const { showError } = useToast();
+    const navigate = useNavigate();
+    const { removeDevice } = useAppData();
+    const { showError, showSuccess } = useToast();
     const [device, setDevice] = useState<Device | null>(null);
     const [history, setHistory] = useState<RepairHistoryEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [historyVisibleCount, setHistoryVisibleCount] = useState(HISTORY_PAGE_SIZE);
 
     const reload = useCallback(async () => {
@@ -212,6 +218,23 @@ export function DeviceDetail() {
 
     const visibleHistory = useMemo(() => history.slice(0, historyVisibleCount), [history, historyVisibleCount]);
     const hasMoreHistory = history.length > historyVisibleCount;
+
+    async function executeDelete() {
+        if (!device) {
+            return;
+        }
+        setDeleting(true);
+        try {
+            await removeDevice(device.id);
+            showSuccess('Устройство удалено');
+            setDeleteConfirmOpen(false);
+            navigate('/devices');
+        } catch (err) {
+            showError(formatApiError(err));
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     return (
         <main className="page">
@@ -260,6 +283,9 @@ export function DeviceDetail() {
                             <Link className="btn-primary device-detail-actions__primary" to={`/repair?deviceId=${device.id}`}>
                                 Создать заявку
                             </Link>
+                            <button type="button" className="btn-danger" disabled={deleting} onClick={() => setDeleteConfirmOpen(true)}>
+                                Удалить устройство
+                            </button>
                         </div>
                     </section>
 
@@ -308,6 +334,31 @@ export function DeviceDetail() {
                     </section>
                 </>
             )}
+            <ConfirmDialog
+                open={deleteConfirmOpen && device !== null}
+                title="Удалить устройство?"
+                message={
+                    device ? (
+                        <>
+                            <p>Будут безвозвратно удалены все заявки и история ремонтов по этому устройству.</p>
+                            <p className="confirm-dialog__target">
+                                <strong>{device.name}</strong>
+                                {device.inventoryNumber ? ` · ${device.inventoryNumber}` : null}
+                            </p>
+                        </>
+                    ) : null
+                }
+                confirmLabel="Удалить"
+                cancelLabel="Отмена"
+                confirmVariant="danger"
+                busy={deleting}
+                onConfirm={() => void executeDelete()}
+                onCancel={() => {
+                    if (!deleting) {
+                        setDeleteConfirmOpen(false);
+                    }
+                }}
+            />
         </main>
     );
 }
