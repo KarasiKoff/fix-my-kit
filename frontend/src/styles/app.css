@@ -1566,7 +1566,8 @@ tbody tr:hover {
   margin-top: 4px;
 }
 
-.device-detail-actions .btn-ghost {
+.device-detail-actions .btn-ghost,
+.device-detail-actions .btn-danger {
   width: auto;
   flex: 0 1 auto;
 }
@@ -2265,6 +2266,62 @@ tbody tr:hover {
 .modal-panel__btn-ghost:hover {
   border-color: var(--accent);
   color: var(--accent-hover);
+}
+
+.confirm-dialog {
+  padding: 22px 24px;
+}
+
+.confirm-dialog__head {
+  margin-bottom: 12px;
+}
+
+.confirm-dialog__message {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.confirm-dialog__message p {
+  margin: 0 0 10px;
+}
+
+.confirm-dialog__message p:last-child {
+  margin-bottom: 0;
+}
+
+.confirm-dialog__target {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.confirm-dialog__list {
+  margin: 12px 0 0;
+  padding-left: 1.2rem;
+  color: var(--text-primary);
+}
+
+.confirm-dialog__list li {
+  margin-bottom: 4px;
+}
+
+.confirm-dialog__actions {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-dialog__cancel,
+.confirm-dialog__confirm {
+  width: auto;
+  min-width: 120px;
+  min-height: 44px;
+  padding: 10px 18px;
+  font-size: 0.95rem;
 }
 
 .modal-panel--wide {

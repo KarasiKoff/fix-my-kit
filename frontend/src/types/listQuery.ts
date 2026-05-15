@@ -1,4 +1,6 @@
-export type SortDir = 'asc' | 'desc';
+﻿export type SortDir = 'asc' | 'desc';
+
+export type DeviceSuggestField = 'inventory_number' | 'name' | 'category' | 'room' | 'responsible';
 
 export type DeviceSortBy =
     | 'inventory_number'

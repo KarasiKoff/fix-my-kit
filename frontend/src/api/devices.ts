@@ -1,5 +1,6 @@
 import { apiRequest, ApiRequestOptions } from './client';
 import { Device } from '../types/device';
+import type { DeviceSuggestField } from '../types/listQuery';
 import { RepairHistoryEntry } from '../types/repairHistory';
 
 type DeviceApi = {
@@ -98,7 +99,7 @@ export async function fetchDevices(params?: DeviceListParams) {
     return { items: response.items.map(mapDevice), total: response.total };
 }
 
-export type DeviceSuggestField = 'inventory_number' | 'name' | 'category' | 'room' | 'responsible';
+export type { DeviceSuggestField } from '../types/listQuery';
 
 export async function suggestDevices(field: DeviceSuggestField, q: string) {
     const params = new URLSearchParams({ field, q });
@@ -162,4 +163,8 @@ export async function updateDeviceStatus(id: string, status: Device['status']) {
             body: JSON.stringify({ repair_status: status }),
         }),
     );
+}
+
+export async function deleteDevice(id: string) {
+    await apiRequest<void>(`/api/devices/${id}`, { method: 'DELETE' });
 }

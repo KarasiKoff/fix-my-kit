@@ -56,6 +56,12 @@ def _device_base_query(db: Session):
     )
 
 
+def _delete_device_and_related(db: Session, device_id: UUID) -> None:
+    db.query(RepairHistory).filter(RepairHistory.device_id == device_id).delete(synchronize_session=False)
+    db.query(RepairRequest).filter(RepairRequest.device_id == device_id).delete(synchronize_session=False)
+    db.query(DeviceModel).filter(DeviceModel.id == device_id).delete(synchronize_session=False)
+
+
 @router.get(
     "/suggest",
     response_model=SuggestResponse,
@@ -175,6 +181,20 @@ def patch_device(device_id: UUID, payload: DeviceUpdate, db: Session = Depends(g
     if refreshed is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
     return _to_device_detail(db, refreshed)
+
+
+@router.delete(
+    "/{device_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.SYSADMIN))],
+)
+def delete_device(device_id: UUID, db: Session = Depends(get_db)) -> None:
+    device = db.query(DeviceModel).filter(DeviceModel.id == device_id).first()
+    if device is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
+
+    _delete_device_and_related(db, device_id)
+    db.commit()
 
 
 @router.get(
