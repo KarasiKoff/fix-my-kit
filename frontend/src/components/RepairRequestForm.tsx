@@ -82,10 +82,12 @@ export function RepairRequestForm({
                     )}
                 </select>
             </label>
-            <label>
-                Фамилия и имя
-                <input value={name} onChange={(e) => setName(e.target.value)} required={nameRequired} />
-            </label>
+            {nameRequired ? (
+                <label>
+                    Фамилия и имя
+                    <input value={name} onChange={(e) => setName(e.target.value)} required />
+                </label>
+            ) : null}
             <label>
                 Описание
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required />

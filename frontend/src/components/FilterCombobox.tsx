@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 type FilterComboboxProps = {
@@ -167,7 +167,7 @@ export function FilterCombobox({
                     ))}
                 </ul>
             ) : null}
-            {loading ? <span className="filter-combobox-hint">тАж</span> : null}
+            {loading ? <span className="filter-combobox-hint">…</span> : null}
         </div>
     );
 }

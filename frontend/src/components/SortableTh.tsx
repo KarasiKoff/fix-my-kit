@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { SortDir } from '../types/listQuery';
 
 type SortableThProps = {
@@ -12,7 +12,7 @@ type SortableThProps = {
 
 export function SortableTh({ label, sortKey, activeSortBy, sortDir, onSort, className }: SortableThProps) {
     const active = activeSortBy === sortKey;
-    const arrow = active ? (sortDir === 'asc' ? ' тЖС' : ' тЖУ') : '';
+    const arrow = active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '';
 
     return (
         <th className={className}>

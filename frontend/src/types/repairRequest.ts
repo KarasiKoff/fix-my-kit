@@ -10,6 +10,8 @@ export type RepairRequest = {
     ticketKey?: string;
     ticketUrl?: string;
     lastSyncedAt?: string;
+    deviceInventoryNumber?: string;
+    deviceName?: string;
 };
 
 export type RepairRequestDetail = RepairRequest & {

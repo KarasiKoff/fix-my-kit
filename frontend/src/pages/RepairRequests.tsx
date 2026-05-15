@@ -1,17 +1,108 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    fetchRepairRequests,
+    isRepairRequestSynced,
+    suggestRepairRequests,
+    syncAllUnsynchronizedRepairRequests,
+    syncRepairRequestTracker,
+    type RepairRequestSuggestField,
+} from '../api/repairRequests';
+import { FilterCombobox } from '../components/FilterCombobox';
+import { ListPagination } from '../components/ListPagination';
+import { SortableTh } from '../components/SortableTh';
 import { useAppData } from '../context/AppDataContext';
 import { useToast } from '../context/ToastContext';
-import { isRepairRequestSynced, syncAllUnsynchronizedRepairRequests, syncRepairRequestTracker } from '../api/repairRequests';
-import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
+import { RepairRequest } from '../types/repairRequest';
+import type { PageSize, RepairRequestSortBy, SortDir } from '../types/listQuery';
 import { formatApiError } from '../utils/formatApiError';
+import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
+import { filtersEqual } from '../utils/filtersMatch';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
+
+type RequestFilters = {
+    device: string;
+    applicant: string;
+    status: '' | 'open' | 'in_progress' | 'closed';
+};
+
+const DEFAULT_SORT: RepairRequestSortBy = 'created_at';
+const DEFAULT_DIR: SortDir = 'desc';
+
+const EMPTY_FILTERS: RequestFilters = { device: '', applicant: '', status: '' };
+
+function deviceLabel(request: RepairRequest): string {
+    if (request.deviceInventoryNumber) {
+        return request.deviceInventoryNumber;
+    }
+    if (request.deviceName) {
+        return request.deviceName;
+    }
+    return request.deviceId;
+}
 
 export function RepairRequests() {
     const navigate = useNavigate();
-    const { repairRequests, getDeviceById, refresh } = useAppData();
+    const { refresh } = useAppData();
     const { showSuccess, showError } = useToast();
+
+    const [items, setItems] = useState<RepairRequest[]>([]);
+    const [total, setTotal] = useState(0);
+    const [fetching, setFetching] = useState(true);
     const [bulkLoading, setBulkLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<PageSize>(20);
+    const [sortBy, setSortBy] = useState<RepairRequestSortBy>(DEFAULT_SORT);
+    const [sortDir, setSortDir] = useState<SortDir>(DEFAULT_DIR);
+    const [draftFilters, setDraftFilters] = useState<RequestFilters>(EMPTY_FILTERS);
+    const [appliedFilters, setAppliedFilters] = useState<RequestFilters>(EMPTY_FILTERS);
+
+    const applyFilters = useCallback(() => {
+        setAppliedFilters({ ...draftFilters });
+        setPage(1);
+    }, [draftFilters]);
+
+    const load = useCallback(async () => {
+        setFetching(true);
+        try {
+            const result = await fetchRepairRequests({
+                device: appliedFilters.device || undefined,
+                applicant: appliedFilters.applicant || undefined,
+                status: appliedFilters.status || undefined,
+                sort_by: sortBy,
+                sort_dir: sortDir,
+                limit: pageSize,
+                offset: (page - 1) * pageSize,
+            });
+            setItems(result.items);
+            setTotal(result.total);
+        } catch (err) {
+            showError(formatApiError(err));
+        } finally {
+            setFetching(false);
+        }
+    }, [appliedFilters, page, pageSize, sortBy, sortDir, showError]);
+
+    useEffect(() => {
+        void load();
+    }, [load]);
+
+    const filtersPending = !filtersEqual(draftFilters, appliedFilters);
+
+    const suggest = useCallback((field: RepairRequestSuggestField) => {
+        return (query: string) => suggestRepairRequests(field, query);
+    }, []);
+
+    function handleSort(key: string) {
+        const col = key as RepairRequestSortBy;
+        setPage(1);
+        if (sortBy === col) {
+            setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortBy(col);
+            setSortDir(col === 'created_at' ? 'desc' : 'asc');
+        }
+    }
 
     async function handleBulkSync() {
         setBulkLoading(true);
@@ -19,6 +110,7 @@ export function RepairRequests() {
             const res = await syncAllUnsynchronizedRepairRequests();
             showSuccess(`Готово: синхронизировано ${res.synced} из ${res.attempted}, ошибок: ${res.failed}`);
             await refresh();
+            await load();
         } catch (err) {
             showError(formatApiError(err));
         } finally {
@@ -31,6 +123,7 @@ export function RepairRequests() {
             await syncRepairRequestTracker(id);
             showSuccess('Синхронизировано');
             await refresh();
+            await load();
         } catch (err) {
             showError(formatApiError(err));
         }
@@ -44,6 +137,60 @@ export function RepairRequests() {
         <main className="page page--wide">
             <h2>Все заявки</h2>
             <section className="card">
+                <h3>Поиск и фильтрация</h3>
+                <p className="filter-hint">
+                    Поиск по части текста. Поле «Устройство» ищет в инв. номере и названии.
+                </p>
+                <div className="grid grid-filters grid-filters--3">
+                    <FilterCombobox
+                        label="Устройство"
+                        value={draftFilters.device}
+                        placeholder="Инв. номер или название"
+                        onChange={(v) => setDraftFilters((p) => ({ ...p, device: v }))}
+                        fetchSuggestions={suggest('device')}
+                    />
+                    <FilterCombobox
+                        label="Заявитель"
+                        value={draftFilters.applicant}
+                        placeholder="Имя заявителя"
+                        onChange={(v) => setDraftFilters((p) => ({ ...p, applicant: v }))}
+                        fetchSuggestions={suggest('applicant')}
+                    />
+                    <label className="filter-select-field">
+                        Статус
+                        <select
+                            value={draftFilters.status}
+                            onChange={(event) =>
+                                setDraftFilters((p) => ({ ...p, status: event.target.value as RequestFilters['status'] }))
+                            }
+                        >
+                            <option value="">Любой статус</option>
+                            <option value="open">{repairRequestStatusLabel('new')}</option>
+                            <option value="in_progress">{repairRequestStatusLabel('in_progress')}</option>
+                            <option value="closed">{repairRequestStatusLabel('closed')}</option>
+                        </select>
+                    </label>
+                </div>
+                <div className="filter-actions">
+                    <button type="button" className="btn-primary" disabled={!filtersPending} onClick={applyFilters}>
+                        Применить фильтры
+                    </button>
+                </div>
+            </section>
+
+            <ListPagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                loading={fetching}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(1);
+                }}
+            />
+
+            <section className="card">
                 <div className="requests-toolbar">
                     <button type="button" className="btn-primary" disabled={bulkLoading} onClick={() => void handleBulkSync()}>
                         {bulkLoading ? 'Синхронизация…' : 'Синхронизировать все несинхронизированные'}
@@ -53,21 +200,49 @@ export function RepairRequests() {
                     <table className="requests-table">
                         <thead>
                             <tr>
-                                <th className="table-col-center">Дата</th>
-                                <th className="table-col-center">Устройство</th>
-                                <th className="table-col-center">Заявитель</th>
-                                <th className="table-col-center">Статус</th>
+                                <SortableTh
+                                    label="Дата"
+                                    sortKey="created_at"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Устройство"
+                                    sortKey="device_inventory_number"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Заявитель"
+                                    sortKey="applicant_name"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
+                                <SortableTh
+                                    label="Статус"
+                                    sortKey="status"
+                                    activeSortBy={sortBy}
+                                    sortDir={sortDir}
+                                    onSort={handleSort}
+                                    className="table-col-center"
+                                />
                                 <th className="table-col-center">Трекер</th>
                                 <th className="table-col-center table-col--narrow" />
                             </tr>
                         </thead>
                         <tbody>
-                            {repairRequests.length === 0 ? (
+                            {items.length === 0 && !fetching ? (
                                 <tr>
                                     <td colSpan={6}>Заявок пока нет.</td>
                                 </tr>
                             ) : (
-                                repairRequests.map((request) => {
+                                items.map((request) => {
                                     const synced = isRepairRequestSynced(request);
                                     const canSync = !synced && request.status !== 'closed';
                                     const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
@@ -84,10 +259,10 @@ export function RepairRequests() {
                                                 }
                                             }}
                                         >
-                                            <td className="table-col-center">{new Date(request.createdAt).toLocaleString('ru-RU')}</td>
                                             <td className="table-col-center">
-                                                {getDeviceById(request.deviceId)?.inventoryNumber ?? request.deviceId}
+                                                {new Date(request.createdAt).toLocaleString('ru-RU')}
                                             </td>
+                                            <td className="table-col-center">{deviceLabel(request)}</td>
                                             <td className="table-col-center">{request.requesterName}</td>
                                             <td className="status-cell table-col-center">
                                                 <span className={repairRequestStatusPillClass(request.status)}>
@@ -113,7 +288,11 @@ export function RepairRequests() {
                                                         Перейти в Tracker
                                                     </a>
                                                 ) : canSync ? (
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={() => void handleRowSync(request.id)}>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-ghost btn-compact"
+                                                        onClick={() => void handleRowSync(request.id)}
+                                                    >
                                                         Синхронизировать
                                                     </button>
                                                 ) : null}

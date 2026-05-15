@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { PageSize } from '../types/listQuery';
 
 type ListPaginationProps = {
@@ -30,7 +30,7 @@ export function ListPagination({
         <div className={`list-pagination${loading ? ' list-pagination--loading' : ''}`} aria-busy={loading}>
             <div className="list-pagination__content">
                 <label className="list-pagination-size">
-                    ╨Э╨░ ╤Б╤В╤А╨░╨╜╨╕╤Ж╨╡
+                    На странице
                     <select
                         value={pageSize}
                         disabled={loading}
@@ -45,17 +45,17 @@ export function ListPagination({
                 </label>
                 {showNav ? (
                     <span className="list-pagination-status">
-                        ╨б╤В╤А╨░╨╜╨╕╤Ж╨░ {safePage} ╨╕╨╖ {totalPages}
-                        {total > 0 ? ` (╨▓╤Б╨╡╨│╨╛ ${total})` : ''}
+                        Страница {safePage} из {totalPages}
+                        {total > 0 ? ` (всего ${total})` : ''}
                     </span>
                 ) : (
-                    <span className="list-pagination-status">{total > 0 ? `╨Т╤Б╨╡╨│╨╛ ${total}` : '╨Э╨╡╤В ╨╖╨░╨┐╨╕╤Б╨╡╨╣'}</span>
+                    <span className="list-pagination-status">{total > 0 ? `Всего ${total}` : 'Нет записей'}</span>
                 )}
                 {canGoBack || canGoForward ? (
                     <div className="list-pagination-actions">
                         {canGoBack ? (
                             <button type="button" className="btn-ghost" disabled={loading} onClick={() => onPageChange(safePage - 1)}>
-                                ╨Э╨░╨╖╨░╨┤
+                                Назад
                             </button>
                         ) : null}
                         {canGoForward ? (
@@ -65,14 +65,14 @@ export function ListPagination({
                                 disabled={loading}
                                 onClick={() => onPageChange(safePage + 1)}
                             >
-                                ╨Т╨┐╨╡╤А╤С╨┤
+                                Вперёд
                             </button>
                         ) : null}
                     </div>
                 ) : null}
             </div>
             {loading ? (
-                <div className="list-pagination__overlay" aria-label="╨Ч╨░╨│╤А╤Г╨╖╨║╨░">
+                <div className="list-pagination__overlay" aria-label="Загрузка">
                     <span className="list-pagination__spinner" />
                 </div>
             ) : null}

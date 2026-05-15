@@ -26,6 +26,9 @@ const DETAIL_RU: Record<string, string> = {
 const VALIDATION_MSG_RU: Record<string, string> = {
     'Field required': 'Заполните обязательное поле',
     'value is not a valid uuid': 'Укажите корректный идентификатор',
+    'String should have at least 8 characters': 'Минимум 8 символов',
+    'String too short': 'Минимум 8 символов',
+    'ensure this value has at least 8 characters': 'Минимум 8 символов',
 };
 
 function translateHeuristic(s: string): string | null {
@@ -49,10 +52,12 @@ function formatValidationIssues(detail: unknown): string {
     }
     const parts: string[] = [];
     for (const item of detail) {
-        if (item && typeof item === 'object' && 'msg' in item) {
-            const msg = (item as { msg?: unknown }).msg;
-            if (typeof msg === 'string') {
-                parts.push(VALIDATION_MSG_RU[msg] ?? translateHeuristic(msg) ?? msg);
+        if (item && typeof item === 'object') {
+            const row = item as { msg?: unknown; type?: unknown };
+            if (typeof row.msg === 'string') {
+                parts.push(VALIDATION_MSG_RU[row.msg] ?? translateHeuristic(row.msg) ?? row.msg);
+            } else if (row.type === 'string_too_short') {
+                parts.push('Минимум 8 символов');
             }
         }
     }
