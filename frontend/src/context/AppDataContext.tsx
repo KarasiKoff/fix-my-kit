@@ -36,8 +36,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
     const refresh = useCallback(async () => {
         setError(null);
-        const [nextDevices, nextRequests] = await Promise.all([fetchDevices(), fetchRepairRequests()]);
-        setDevices(nextDevices);
+        const [devicesPage, nextRequests] = await Promise.all([
+            fetchDevices({ limit: 50, offset: 0 }),
+            fetchRepairRequests(),
+        ]);
+        setDevices(devicesPage.items);
         setRepairRequests(nextRequests);
     }, []);
 

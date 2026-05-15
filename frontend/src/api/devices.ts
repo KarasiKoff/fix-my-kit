@@ -1,5 +1,6 @@
 import { apiRequest, ApiRequestOptions } from './client';
 import { Device } from '../types/device';
+import type { DeviceSuggestField } from '../types/listQuery';
 import { RepairHistoryEntry } from '../types/repairHistory';
 
 type DeviceApi = {
@@ -57,9 +58,53 @@ function mapHistoryRow(item: HistoryApi): RepairHistoryEntry {
     };
 }
 
-export async function fetchDevices() {
-    const response = await apiRequest<{ items: DeviceApi[]; total: number }>('/api/devices');
-    return response.items.map(mapDevice);
+export type DeviceListParams = {
+    inventory_number?: string;
+    name?: string;
+    category?: string;
+    room?: string;
+    responsible?: string;
+    repair_status?: Device['status'];
+    sort_by?: string;
+    sort_dir?: 'asc' | 'desc';
+    limit?: number;
+    offset?: number;
+};
+
+function buildQuery(params: Record<string, string | number | undefined>): string {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== '') {
+            search.set(key, String(value));
+        }
+    }
+    const q = search.toString();
+    return q ? `?${q}` : '';
+}
+
+export async function fetchDevices(params?: DeviceListParams) {
+    const query = buildQuery({
+        inventory_number: params?.inventory_number,
+        name: params?.name,
+        category: params?.category,
+        room: params?.room,
+        responsible: params?.responsible,
+        repair_status: params?.repair_status,
+        sort_by: params?.sort_by,
+        sort_dir: params?.sort_dir,
+        limit: params?.limit ?? 50,
+        offset: params?.offset ?? 0,
+    });
+    const response = await apiRequest<{ items: DeviceApi[]; total: number }>(`/api/devices${query}`);
+    return { items: response.items.map(mapDevice), total: response.total };
+}
+
+export type { DeviceSuggestField } from '../types/listQuery';
+
+export async function suggestDevices(field: DeviceSuggestField, q: string) {
+    const params = new URLSearchParams({ field, q });
+    const response = await apiRequest<{ items: string[] }>(`/api/devices/suggest?${params.toString()}`);
+    return response.items;
 }
 
 export async function fetchDeviceById(id: string) {
