@@ -6,6 +6,6 @@ export type RepairHistoryEntry = {
     newStatus?: 'not_in_repair' | 'in_repair';
     note?: string;
     createdAt: string;
-    trackerTicketKey?: string;
-    trackerTicketUrl?: string;
+    ticketKey?: string;
+    ticketUrl?: string;
 };

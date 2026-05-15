@@ -27,7 +27,7 @@ export function mapDevice(item: DeviceApi): Device {
         responsible: item.responsible?.full_name ?? item.responsible?.login ?? '',
         responsibleId: item.responsible?.id ?? null,
         status: item.repair_status,
-        takenBySysadmin: item.taken_by_sysadmin ?? item.repair_status === 'in_repair',
+        takenBySysadmin: item.taken_by_sysadmin ?? false,
     };
 }
 
@@ -52,8 +52,8 @@ function mapHistoryRow(item: HistoryApi): RepairHistoryEntry {
         newStatus: (item.new_status as RepairHistoryEntry['newStatus']) ?? undefined,
         note: item.note ?? undefined,
         createdAt: item.created_at,
-        trackerTicketKey: item.tracker_ticket_key ?? undefined,
-        trackerTicketUrl: item.tracker_ticket_url ?? undefined,
+        ticketKey: item.tracker_ticket_key ?? undefined,
+        ticketUrl: item.tracker_ticket_url ?? undefined,
     };
 }
 
