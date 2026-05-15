@@ -201,6 +201,7 @@ export function RepairRequestDetailPage() {
     const canAct = apiSt !== 'closed';
     const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
     const resolutionNoteTrimmed = noteParts.resolutionTrimmed;
+    const resolutionDescTrimmed = request.resolutionDesc?.trim() ?? '';
     const closedByDisplayed = noteParts.closedFromMeta || closedByDbLabel || '';
 
     return (
@@ -229,6 +230,11 @@ export function RepairRequestDetailPage() {
                         ) : (
                             <span className="badge danger">Нет в Трекере</span>
                         )}
+                        {request.takenBySysadmin ? (
+                            <span className="status-pill status-pill--request-progress" title="Устройство забрал сисадмин">
+                                В работе
+                            </span>
+                        ) : null}
                         <span className="repair-detail-status-inline-sep" aria-hidden="true" />
                         <span className="repair-detail-status-kv repair-detail-status-kv--resolution">
                             <strong>Резолюция:</strong>{' '}
@@ -250,6 +256,12 @@ export function RepairRequestDetailPage() {
                             <span className="repair-detail-status-kv repair-detail-status-kv--closed-by">
                                 <strong>Кем закрыт:</strong>{' '}
                                 <span>{closedByDisplayed || '—'}</span>
+                            </span>
+                        ) : null}
+                        {resolutionDescTrimmed ? (
+                            <span className="repair-detail-status-kv repair-detail-status-kv--comment">
+                                <strong>Комментарий:</strong>{' '}
+                                <span className="repair-detail-resolution-text">{resolutionDescTrimmed}</span>
                             </span>
                         ) : null}
                     </p>
