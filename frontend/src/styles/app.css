@@ -75,30 +75,40 @@ a:hover {
   text-align: center;
 }
 
-.toast {
+.toast-host {
   position: fixed;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(var(--topbar-height, 64px) + 12px);
+  left: 0;
+  right: 0;
   z-index: 2000;
-  padding: 16px 26px;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  padding: 12px 22px;
   border-radius: 12px;
   font-weight: 600;
-  font-size: 1.05rem;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  font-size: 0.95rem;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
   max-width: min(440px, calc(100vw - 32px));
   text-align: center;
   line-height: 1.35;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
 }
 
 .toast--success {
-  background: #22c55e;
+  background: rgba(34, 197, 94, 0.88);
   color: #052e16;
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .toast--error {
-  background: #ef4444;
+  background: rgba(239, 68, 68, 0.9);
   color: #fff7f7;
   border: 1px solid rgba(0, 0, 0, 0.2);
 }
@@ -224,8 +234,17 @@ a:hover {
   margin-bottom: 4px;
 }
 
-.topbar-account-signout {
+.topbar-account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topbar-account-action {
   width: 100%;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 .topbar-nav {
@@ -395,6 +414,12 @@ a:hover {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+@media (max-width: 1200px) {
+  .admin-hub-grid--row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .admin-hub-grid--row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -547,16 +572,38 @@ td.table-col-start {
 .admin-row-actions {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  box-sizing: border-box;
+  margin-inline: auto;
+  max-width: 100%;
 }
 
 .admin-row-actions .btn-compact {
   flex: 0 0 auto;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.admin-table tbody tr.admin-table-row--editing td {
+  vertical-align: middle;
+  padding-block: 10px;
+}
+
+.admin-table-row--editing .admin-table-cell--input input,
+.admin-table-row--editing .admin-table-cell--input select {
+  width: min(100%, 240px);
+  min-height: 36px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.admin-table-row--editing .admin-row-actions {
+  gap: 6px;
+}
+
+.table-col--nowrap {
   white-space: nowrap;
 }
 
@@ -661,6 +708,11 @@ td.table-col-start {
 .admin-table-wrap {
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
+  overflow-x: auto;
+}
+
+.admin-table-wrap .admin-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* Узкая «листовая» админ-карточка: кабинеты, категории */
@@ -682,6 +734,13 @@ td.table-col-start {
 
 .admin-table {
   margin: 0;
+  table-layout: fixed;
+}
+
+.admin-table .table-col-actions {
+  width: 300px;
+  min-width: 300px;
+  vertical-align: middle;
 }
 
 .admin-table-empty {
@@ -1633,6 +1692,13 @@ tbody tr:hover {
   color: var(--text-primary);
 }
 
+.admin-hub-card--title-only .admin-hub-card-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .admin-hub-card-desc {
   font-size: 13px;
   line-height: 1.45;
@@ -1651,12 +1717,41 @@ tbody tr:hover {
   cursor: not-allowed;
 }
 
-.admin-password-self {
-  margin-top: 18px;
+.page--centered > .card.admin-password-page {
+  width: 100%;
+  max-width: min(400px, 100%);
+  padding: 18px 20px;
 }
 
-.admin-password-self-form {
-  flex-wrap: wrap;
+.admin-password-page .card-heading {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.admin-password-page-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.admin-password-page-form .admin-inline-field {
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+.admin-password-page-form .admin-inline-label {
+  margin-bottom: 4px;
+}
+
+.admin-password-page-form .admin-inline-actions {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.admin-password-page-form .admin-inline-actions .btn-primary {
+  width: 100%;
+  min-height: 42px;
 }
 
 .qr-scan-hint {

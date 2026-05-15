@@ -10,7 +10,7 @@ import { Device } from '../types/device';
 import { formatApiError } from '../utils/formatApiError';
 
 export function NewRepairRequest() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const { showSuccess, showError } = useToast();
     const { devices, createRepairRequest, isLoading: appDataLoading } = useAppData();
     const [searchParams] = useSearchParams();
@@ -99,7 +99,7 @@ export function NewRepairRequest() {
             if (isAuthenticated) {
                 await createRepairRequest({
                     deviceId: data.deviceId,
-                    requesterName: data.name,
+                    requesterName: user?.name ?? user?.login ?? '',
                     description: data.description,
                     syncToTracker: sendToTracker,
                 });

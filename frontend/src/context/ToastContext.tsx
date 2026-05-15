@@ -7,6 +7,11 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+const TOAST_DURATION_MS = {
+    success: 2200,
+    error: 3800,
+} as const;
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
     const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -27,7 +32,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         timerRef.current = setTimeout(() => {
             setToast(null);
             timerRef.current = null;
-        }, 5000);
+        }, TOAST_DURATION_MS[type]);
     }, []);
 
     const showSuccess = useCallback((msg: string) => push('success', msg), [push]);
@@ -39,11 +44,36 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         <ToastContext.Provider value={value}>
             {children}
             {toast ? (
-                <div className={`toast toast--${toast.type === 'success' ? 'success' : 'error'}`} role="status" aria-live="assertive">
-                    {toast.message}
-                </div>
+                <ToastBanner type={toast.type} message={toast.message} onDismiss={hide} />
             ) : null}
         </ToastContext.Provider>
+    );
+}
+
+function ToastBanner({
+    type,
+    message,
+    onDismiss,
+}: {
+    type: 'success' | 'error';
+    message: string;
+    onDismiss: () => void;
+}) {
+    return (
+        <div className="toast-host" aria-live="polite">
+            <div
+                className={`toast toast--${type === 'success' ? 'success' : 'error'}`}
+                role="status"
+                onClick={onDismiss}
+                onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                        onDismiss();
+                    }
+                }}
+            >
+                {message}
+            </div>
+        </div>
     );
 }
 
