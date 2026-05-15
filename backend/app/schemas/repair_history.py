@@ -23,3 +23,5 @@ class RepairHistoryResponse(RepairHistoryBase):
 
     id: UUID
     created_at: datetime
+    tracker_ticket_key: str | None = None
+    tracker_ticket_url: str | None = None
