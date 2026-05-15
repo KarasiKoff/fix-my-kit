@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
 from backend.app.api.deps import get_db, require_admin_or_sysadmin
@@ -21,12 +22,22 @@ from backend.app.schemas.repair_request import (
     RepairRequestStatusUpdate,
     RepairRequestTake,
 )
-from backend.app.schemas.tracker import TrackerSyncResponse, TrackerBulkSyncResponse
+from backend.app.schemas.suggest import SuggestResponse
+from backend.app.schemas.tracker import TrackerBulkSyncResponse, TrackerSyncResponse
 from backend.app.services.repair_history_service import add_repair_history
 from backend.app.services.repair_request_closure_service import record_repair_request_closed
+from backend.app.services.repair_request_list_query import fetch_repair_requests_page, suggest_repair_requests
 from backend.app.services.tracker_service import TrackerUnavailableError, sync_repair_request_to_tracker
 
 router = APIRouter(prefix="/api", tags=["repair-requests"])
+
+_REPAIR_REQUEST_SORT_FIELDS: set[str] = {
+    "created_at",
+    "device_inventory_number",
+    "applicant_name",
+    "status",
+}
+_REPAIR_REQUEST_SUGGEST_FIELDS: set[str] = {"device", "applicant"}
 
 ACTIVE_STATUSES = (RequestStatus.OPEN, RequestStatus.IN_PROGRESS)
 ALLOWED_STATUS_TRANSITIONS = {
@@ -93,35 +104,62 @@ def _record_request_created(db: Session, repair_request: RepairRequest) -> None:
     )
 
 
+@router.get("/repair-requests/suggest", response_model=SuggestResponse)
+def repair_request_suggest(
+    field: str = Query(...),
+    q: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_or_sysadmin),
+) -> SuggestResponse:
+    if field not in _REPAIR_REQUEST_SUGGEST_FIELDS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_suggest_field")
+    return SuggestResponse(items=suggest_repair_requests(db, field, q))
+
+
 @router.get("/repair-requests", response_model=RepairRequestList)
 def list_repair_requests(
+    device: str | None = Query(default=None, description="Filter by device inventory number or name"),
+    applicant: str | None = Query(default=None, description="Filter by applicant name"),
     status_filter: RequestStatus | None = Query(default=None, alias="status"),
     device_id: UUID | None = None,
     author_user_id: UUID | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
-    limit: int = Query(default=50, ge=1, le=100),
+    sort_by: str = Query(default="created_at"),
+    sort_dir: Literal["asc", "desc"] = Query(default="desc"),
+    limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_or_sysadmin),
 ) -> RepairRequestList:
-    query = db.query(RepairRequest)
+    if sort_by not in _REPAIR_REQUEST_SORT_FIELDS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_sort_by")
 
-    if status_filter is not None:
-        query = query.filter(RepairRequest.status == status_filter)
-    if device_id is not None:
-        query = query.filter(RepairRequest.device_id == device_id)
-    if author_user_id is not None:
-        query = query.filter(RepairRequest.author_user_id == author_user_id)
-    if date_from is not None:
-        query = query.filter(RepairRequest.created_at >= date_from)
-    if date_to is not None:
-        query = query.filter(RepairRequest.created_at <= date_to)
+    _ = device_id, author_user_id, date_from, date_to, current_user
 
-    total = query.with_entities(func.count(RepairRequest.id)).scalar() or 0
-    items = query.order_by(RepairRequest.created_at.desc()).limit(limit).offset(offset).all()
+    items, total = fetch_repair_requests_page(
+        db,
+        device=device,
+        applicant=applicant,
+        status=status_filter,
+        sort_by=sort_by,  # type: ignore[arg-type]
+        sort_dir=sort_dir,
+        limit=limit,
+        offset=offset,
+    )
+    return RepairRequestList(items=[_repair_request_list_item(item) for item in items], total=total)
 
-    return RepairRequestList(items=[RepairRequestResponse.model_validate(item) for item in items], total=total)
+
+def _repair_request_list_item(item: RepairRequest) -> RepairRequestResponse:
+    payload = RepairRequestResponse.model_validate(item)
+    if item.device is None:
+        return payload
+    return payload.model_copy(
+        update={
+            "device_inventory_number": item.device.inventory_number,
+            "device_name": item.device.name,
+        }
+    )
 
 
 @router.post(

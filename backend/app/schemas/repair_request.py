@@ -59,6 +59,8 @@ class RepairRequestResponse(RepairRequestBase):
     last_sync_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    device_inventory_number: str | None = None
+    device_name: str | None = None
 
 
 class RepairRequestList(BaseModel):
