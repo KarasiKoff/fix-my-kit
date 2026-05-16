@@ -202,7 +202,13 @@ def yandex_tracker_close_repair_request(
                 detail="webhook_actor_missing_restart_app",
             )
         closer = _resolve_closed_by_user(db, payload.user, fallback)
-        record_repair_request_closed(db, repair_request, closer, payload.resolution)
+        record_repair_request_closed(
+            db,
+            repair_request,
+            closer,
+            payload.resolution,
+            payload.resolution_desc,
+        )
         db.commit()
         return YandexTrackerWebhookResponse(
             status="closed",
@@ -218,6 +224,8 @@ def yandex_tracker_close_repair_request(
     repair_request.status = target
     if payload.resolution is not None:
         repair_request.resolution_note = payload.resolution
+    if payload.resolution_desc is not None:
+        repair_request.resolution_desc = payload.resolution_desc
     add_repair_history(
         db,
         device_id=repair_request.device_id,
