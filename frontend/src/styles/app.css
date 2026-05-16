@@ -810,6 +810,18 @@ td.table-col-start {
   border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
+.status-pill--request-resolved {
+  background: rgba(34, 197, 94, 0.18);
+  color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.status-pill--sysadmin-taken {
+  background: rgba(123, 150, 255, 0.22);
+  color: #c7d4ff;
+  border: 1px solid rgba(123, 150, 255, 0.42);
+}
+
 .status-pill--device-ok {
   background: rgba(34, 197, 94, 0.18);
   color: #bbf7d0;

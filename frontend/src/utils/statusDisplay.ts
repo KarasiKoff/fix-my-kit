@@ -11,6 +11,24 @@ export function repairRequestStatusLabel(status: RepairRequest['status']): strin
     return map[status] ?? status;
 }
 
+/**
+ * Второй бейдж рядом со статусом заявки (не путать с основным «В работе» / «Закрыта»):
+ * - in_progress → «Забрал сисадмин»
+ * - closed → «Решён»
+ * - new → скрыт
+ */
+export function repairRequestWorkflowBubble(
+    status: RepairRequest['status'],
+): { label: string; className: string } | null {
+    if (status === 'closed') {
+        return { label: 'Решён', className: 'status-pill status-pill--request-resolved' };
+    }
+    if (status === 'in_progress') {
+        return { label: 'Забрал сисадмин', className: 'status-pill status-pill--sysadmin-taken' };
+    }
+    return null;
+}
+
 export function repairRequestStatusPillClass(status: RepairRequest['status']): string {
     switch (status) {
         case 'new':

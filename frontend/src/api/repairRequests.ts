@@ -15,6 +15,7 @@ type RepairRequestApi = {
     tracker_ticket_url?: string | null;
     last_sync_at?: string | null;
     resolution_note?: string | null;
+    resolution_desc?: string | null;
     closed_at?: string | null;
     closed_by_user_id?: string | null;
     closed_by_tracker_display?: string | null;
@@ -45,6 +46,7 @@ function mapDetail(item: RepairRequestApi): RepairRequestDetail {
     return {
         ...base,
         resolutionNote: item.resolution_note ?? undefined,
+        resolutionDesc: item.resolution_desc ?? undefined,
         closedAt: item.closed_at ?? undefined,
         closedByUserId: item.closed_by_user_id ?? undefined,
         closedByTrackerDisplay: item.closed_by_tracker_display ?? undefined,
