@@ -5,6 +5,7 @@ export type RepairRequest = {
     description: string;
     status: 'new' | 'in_progress' | 'closed';
     takenBySysadmin: boolean;
+    isPublished: boolean;
     createdAt: string;
     ticketId?: string;
     ticketKey?: string;
@@ -20,4 +21,29 @@ export type RepairRequestDetail = RepairRequest & {
     closedAt?: string | null;
     closedByUserId?: string | null;
     closedByTrackerDisplay?: string | null;
+};
+
+export type PublicRepairRequestItem = {
+    id: string;
+    description: string;
+    status: 'open' | 'in_progress' | 'closed';
+    createdAt: string;
+    closedAt?: string | null;
+    resolutionNote?: string | null;
+    applicantName?: string | null;
+};
+
+export type PublicDeviceInfo = {
+    id: string;
+    inventoryNumber: string;
+    name: string;
+    category?: { id: string; name: string } | null;
+    audience?: { id: number; name: string } | null;
+};
+
+export type PublicRepairSummary = {
+    device: PublicDeviceInfo;
+    activeRequest: PublicRepairRequestItem | null;
+    hasUnpublishedActive: boolean;
+    history: PublicRepairRequestItem[];
 };

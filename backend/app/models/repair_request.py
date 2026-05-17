@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import Column, Enum as SQLEnum
+from sqlalchemy import Boolean, Column, Enum as SQLEnum
 from sqlalchemy import ForeignKey, String, Text, Uuid
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import TIMESTAMP
@@ -29,6 +29,7 @@ class RepairRequest(Base):
     tracker_ticket_key = Column(String, nullable=True)
     tracker_ticket_url = Column(String, nullable=True)
     last_sync_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    is_published = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
         TIMESTAMP(timezone=True),

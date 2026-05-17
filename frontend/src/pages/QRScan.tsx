@@ -34,7 +34,7 @@ export function QRScan() {
     async function handleScan(value: string) {
         const fromQr = extractDeviceId(value);
         if (fromQr) {
-            navigate(`/repair?deviceId=${fromQr}`);
+            navigate(`/device/${fromQr}/public`);
             return;
         }
 
@@ -45,7 +45,7 @@ export function QRScan() {
             }
             try {
                 const device = await fetchPublicDeviceByInventory(raw);
-                navigate(`/repair?deviceId=${device.id}`);
+                navigate(`/device/${device.id}/public`);
             } catch (err) {
                 showError(formatApiError(err));
                 throw err;
@@ -58,7 +58,7 @@ export function QRScan() {
         const byInventory = devices.find((device) => device.inventoryNumber.toLowerCase() === normalized);
         const device = byId ?? byInventory;
         if (device) {
-            navigate(`/repair?deviceId=${device.id}`);
+            navigate(`/device/${device.id}/public`);
         } else {
             showError('Устройство не найдено. Проверьте инвентарный номер или войдите в систему.');
         }

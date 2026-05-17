@@ -2766,3 +2766,86 @@ tbody tr:hover {
   margin-top: 14px;
 }
 
+/* —— Public device history page —— */
+.public-history-section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.public-history-active-card {
+  border-color: rgba(123, 150, 255, 0.4);
+}
+
+.public-history-active-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.public-history-moderation-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fcd34d;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  width: 100%;
+  max-width: min(520px, 100%);
+}
+
+.public-history-moderation-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.public-history-item-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 6px;
+}
+
+.public-history-item-desc {
+  margin: 0 0 6px;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.public-history-item-resolution {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* —— Publish toggle button —— */
+.btn-publish {
+  background: rgba(123, 150, 255, 0.15);
+  color: #c7d4ff;
+  border: 1px solid rgba(123, 150, 255, 0.4);
+}
+
+.btn-publish:hover {
+  background: rgba(123, 150, 255, 0.25);
+}
+
+.btn-publish--active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.btn-publish--active:hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+
