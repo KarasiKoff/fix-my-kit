@@ -711,6 +711,10 @@ td.table-col-start {
   overflow-x: auto;
 }
 
+.admin-crud-sheet .admin-table-wrap {
+  overflow-x: visible;
+}
+
 .admin-table-wrap .admin-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -730,6 +734,30 @@ td.table-col-start {
 
 .admin-crud-sheet .admin-table-placeholder-row td {
   height: 44px;
+}
+
+.admin-crud-sheet .admin-table {
+  table-layout: auto;
+}
+
+.admin-crud-sheet .admin-table .table-col--narrow {
+  width: 1%;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.admin-crud-sheet .admin-row-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 8.75rem;
+  min-width: 8.75rem;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-crud-sheet .admin-row-actions .btn-compact {
+  width: 100%;
 }
 
 .admin-table {
@@ -922,8 +950,9 @@ td.status-cell {
   min-width: 0;
 }
 
-.repair-request-form button[type='submit'] {
+.repair-request-form button[type='submit'].btn-primary {
   margin-top: 2px;
+  width: 100%;
 }
 
 .repair-request-form textarea {
@@ -1347,6 +1376,18 @@ select:focus {
   outline: none;
   border-color: rgba(123, 150, 255, 0.55);
   box-shadow: 0 0 0 3px rgba(123, 150, 255, 0.15);
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: calc(var(--control-padding-x) + 1.75rem);
+  background-color: var(--bg-input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 16 16'%3E%3Cpath stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px;
 }
 
 input[type='checkbox'],
@@ -2597,11 +2638,12 @@ tbody tr:hover {
 .filter-combobox-input,
 .filter-select-field select {
   width: 100%;
-  padding: var(--control-padding-y) var(--control-padding-x);
+  padding: var(--control-padding-y) calc(var(--control-padding-x) + 1.75rem) var(--control-padding-y)
+    var(--control-padding-x);
   font-size: var(--control-font);
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
-  background: var(--bg-input);
+  background-color: var(--bg-input);
   color: var(--text-primary);
 }
 
@@ -2733,10 +2775,10 @@ tbody tr:hover {
 }
 
 .list-pagination-size select {
-  padding: 8px 12px;
+  padding: 8px calc(12px + 1.75rem) 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--border-subtle);
-  background: var(--bg-input);
+  background-color: var(--bg-input);
   color: var(--text-primary);
 }
 
