@@ -22,6 +22,10 @@ function extractDeviceId(raw: string): string | null {
     if (pathMatch) {
         return pathMatch[1];
     }
+    const publicPathMatch = lower.match(/\/device\/([0-9a-f-]{36})\/public/);
+    if (publicPathMatch) {
+        return publicPathMatch[1];
+    }
     return null;
 }
 
