@@ -20,6 +20,8 @@ export function FilterCombobox({
 }: FilterComboboxProps) {
     const listId = useId();
     const rootRef = useRef<HTMLDivElement>(null);
+    const focusedRef = useRef(false);
+    const [focused, setFocused] = useState(false);
     const [open, setOpen] = useState(false);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
@@ -34,12 +36,17 @@ export function FilterCombobox({
             return;
         }
 
+        if (!focused) {
+            setOpen(false);
+            return;
+        }
+
         let active = true;
         setLoading(true);
         const timer = window.setTimeout(() => {
             fetchSuggestions(trimmed)
                 .then((items) => {
-                    if (!active) {
+                    if (!active || !focusedRef.current) {
                         return;
                     }
                     setSuggestions(items);
@@ -47,7 +54,7 @@ export function FilterCombobox({
                     setHighlight(items.length > 0 ? 0 : -1);
                 })
                 .catch(() => {
-                    if (active) {
+                    if (active && focusedRef.current) {
                         setSuggestions([]);
                         setOpen(false);
                         setHighlight(-1);
@@ -64,7 +71,7 @@ export function FilterCombobox({
             active = false;
             window.clearTimeout(timer);
         };
-    }, [value, fetchSuggestions]);
+    }, [value, fetchSuggestions, focused]);
 
     useEffect(() => {
         function onDocClick(event: MouseEvent) {
@@ -139,9 +146,21 @@ export function FilterCombobox({
                 disabled={disabled}
                 onChange={(event) => onChange(event.target.value)}
                 onFocus={() => {
-                    if (suggestions.length > 0) {
+                    focusedRef.current = true;
+                    setFocused(true);
+                    if (suggestions.length > 0 && value.trim()) {
                         setOpen(true);
                     }
+                }}
+                onBlur={() => {
+                    focusedRef.current = false;
+                    setFocused(false);
+                    window.setTimeout(() => {
+                        if (!focusedRef.current) {
+                            setOpen(false);
+                            setHighlight(-1);
+                        }
+                    }, 0);
                 }}
                 onKeyDown={onKeyDown}
                 role="combobox"
@@ -167,7 +186,7 @@ export function FilterCombobox({
                     ))}
                 </ul>
             ) : null}
-            {loading ? <span className="filter-combobox-hint">…</span> : null}
+            {loading && focused ? <span className="filter-combobox-hint">…</span> : null}
         </div>
     );
 }
