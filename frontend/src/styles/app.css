@@ -2571,7 +2571,6 @@ tbody tr:hover {
   }
 }
 
-/* —— List filters, sort, pagination —— */
 .grid-filters {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
@@ -2764,5 +2763,135 @@ tbody tr:hover {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 14px;
+}
+
+/* --- 404: полоса на всю ширину, слева текст — справа кот --- */
+.page.page-not-found-simple {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.page.page-not-found-simple > h2:first-of-type {
+  text-align: center;
+}
+
+.not-found-banner {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  padding: clamp(24px, 4.5vw, 40px) var(--page-padding-x);
+}
+
+.not-found-banner__inner {
+  max-width: var(--layout-max);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 400px);
+  align-items: center;
+  gap: clamp(24px, 5vw, 56px);
+  min-height: clamp(180px, min(28vh, 300px), 320px);
+}
+
+.not-found-banner__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: clamp(12px, 2vw, 18px);
+}
+
+.not-found-banner__title {
+  margin: 0;
+  font-size: clamp(1.25rem, 3.2vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.not-found-banner__lead {
+  margin: 0;
+  max-width: 38rem;
+  line-height: 1.55;
+  font-size: 0.98rem;
+}
+
+.not-found-banner__cat-link {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  line-height: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.not-found-banner__cat-link:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+}
+
+.not-found-banner__cat-link:focus {
+  outline: none;
+}
+
+.not-found-banner__cat-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.not-found-banner__visual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  align-self: stretch;
+}
+
+.not-found-banner__cat {
+  display: block;
+  width: 100%;
+  max-width: min(360px, 100%);
+  height: auto;
+  max-height: min(280px, 34vh);
+  object-fit: contain;
+  object-position: right bottom;
+  filter: invert(1) brightness(0.88);
+  opacity: 0.94;
+}
+
+@media (max-width: 768px) {
+  .not-found-banner__inner {
+    grid-template-columns: 1fr;
+    min-height: unset;
+    gap: clamp(20px, 5vw, 28px);
+  }
+
+  .not-found-banner__copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .not-found-banner__visual {
+    justify-content: center;
+    order: 1;
+  }
+
+  .not-found-banner__cat {
+    max-width: min(300px, 80vw);
+    max-height: min(240px, 38vh);
+    object-position: center bottom;
+  }
 }
 

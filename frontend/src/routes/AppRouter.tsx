@@ -14,6 +14,7 @@ import { AdminAddCategory } from '../pages/admin/AdminAddCategory';
 import { AdminAddRoom } from '../pages/admin/AdminAddRoom';
 import { AdminAddDevice } from '../pages/admin/AdminAddDevice';
 import { AdminChangePassword } from '../pages/admin/AdminChangePassword';
+import { NotFoundPage } from '../pages/NotFoundPage';
 import { useAuth } from '../hooks/useAuth';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { UserAccountMenu } from '../components/UserAccountMenu';
@@ -105,6 +106,7 @@ function AppShell() {
                 <Route path="/admin/password" element={<RequireAuth><AdminChangePassword /></RequireAuth>} />
                 <Route path="/admin/add/user" element={<Navigate to="/admin/users" replace />} />
                 <Route path="/scan" element={<ErrorBoundary><QRScan /></ErrorBoundary>} />
+                <Route path="*" element={<NotFoundPage />} />
             </Routes>
             </div>
         </div>
