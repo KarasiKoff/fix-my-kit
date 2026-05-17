@@ -1,6 +1,6 @@
 import { getStoredAuthToken } from './auth';
 import { apiRequest } from './client';
-import { RepairRequest, RepairRequestDetail } from '../types/repairRequest';
+import { PublicRepairSummary, RepairRequest, RepairRequestDetail } from '../types/repairRequest';
 
 type RepairRequestApi = {
     id: string;
@@ -8,6 +8,7 @@ type RepairRequestApi = {
     applicant_name?: string | null;
     description: string;
     status: 'open' | 'in_progress' | 'closed';
+    is_published: boolean;
     taken_by_sysadmin_at?: string | null;
     created_at: string;
     tracker_ticket_id?: string | null;
@@ -23,6 +24,35 @@ type RepairRequestApi = {
     device_name?: string | null;
 };
 
+type PublicRepairSummaryApi = {
+    device: {
+        id: string;
+        inventory_number: string;
+        name: string;
+        category?: { id: string; name: string } | null;
+        audience?: { id: number; name: string } | null;
+    };
+    active_request: {
+        id: string;
+        description: string;
+        status: string;
+        created_at: string;
+        closed_at?: string | null;
+        resolution_note?: string | null;
+        applicant_name?: string | null;
+    } | null;
+    has_unpublished_active: boolean;
+    history: Array<{
+        id: string;
+        description: string;
+        status: string;
+        created_at: string;
+        closed_at?: string | null;
+        resolution_note?: string | null;
+        applicant_name?: string | null;
+    }>;
+};
+
 function mapRepairRequest(item: RepairRequestApi): RepairRequest {
     return {
         id: item.id,
@@ -31,6 +61,7 @@ function mapRepairRequest(item: RepairRequestApi): RepairRequest {
         description: item.description,
         status: item.status === 'open' ? 'new' : item.status,
         takenBySysadmin: Boolean(item.taken_by_sysadmin_at),
+        isPublished: item.is_published ?? false,
         createdAt: item.created_at,
         ticketId: item.tracker_ticket_id ?? undefined,
         ticketKey: item.tracker_ticket_key ?? undefined,
@@ -100,6 +131,7 @@ export async function createRepairRequest(payload: {
         applicant_name: payload.requesterName,
         description: payload.description,
         status: st,
+        is_published: false,
         taken_by_sysadmin_at: null,
         created_at: new Date().toISOString(),
         tracker_ticket_id: null,
@@ -201,4 +233,50 @@ export async function syncAllUnsynchronizedRepairRequests() {
         '/api/repair-requests/tracker/sync-unsynchronized',
         { method: 'POST' },
     );
+}
+
+export async function publishRepairRequest(id: string, isPublished: boolean): Promise<RepairRequestDetail> {
+    return mapDetail(
+        await apiRequest<RepairRequestApi>(`/api/repair-requests/${id}/publish`, {
+            method: 'PATCH',
+            body: JSON.stringify({ is_published: isPublished }),
+        }),
+    );
+}
+
+export async function fetchPublicRepairSummary(deviceId: string): Promise<PublicRepairSummary> {
+    const data = await apiRequest<PublicRepairSummaryApi>(
+        `/api/public/devices/${deviceId}/repair-summary`,
+        { skipAuth: true },
+    );
+    return {
+        device: {
+            id: data.device.id,
+            inventoryNumber: data.device.inventory_number,
+            name: data.device.name,
+            category: data.device.category ?? null,
+            audience: data.device.audience ?? null,
+        },
+        activeRequest: data.active_request
+            ? {
+                  id: data.active_request.id,
+                  description: data.active_request.description,
+                  status: data.active_request.status as 'open' | 'in_progress' | 'closed',
+                  createdAt: data.active_request.created_at,
+                  closedAt: data.active_request.closed_at,
+                  resolutionNote: data.active_request.resolution_note,
+                  applicantName: data.active_request.applicant_name,
+              }
+            : null,
+        hasUnpublishedActive: data.has_unpublished_active,
+        history: data.history.map((h) => ({
+            id: h.id,
+            description: h.description,
+            status: h.status as 'open' | 'in_progress' | 'closed',
+            createdAt: h.created_at,
+            closedAt: h.closed_at,
+            resolutionNote: h.resolution_note,
+            applicantName: h.applicant_name,
+        })),
+    };
 }

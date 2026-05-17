@@ -207,7 +207,7 @@ def get_device_qr(device_id: UUID, db: Session = Depends(get_db)) -> DeviceQrRes
     if exists is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device_not_found")
     base = settings.server.public_frontend_base_url.rstrip("/")
-    return DeviceQrResponse(device_id=device_id, url=f"{base}/repair?deviceId={device_id}")
+    return DeviceQrResponse(device_id=device_id, url=f"{base}/device/{device_id}/public")
 
 
 @router.get(

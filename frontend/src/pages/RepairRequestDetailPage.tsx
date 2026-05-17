@@ -7,6 +7,7 @@ import {
     patchRepairRequestClose,
     patchRepairRequestStatus,
     patchRepairRequestTake,
+    publishRepairRequest,
     syncRepairRequestTracker,
 } from '../api/repairRequests';
 import { Device } from '../types/device';
@@ -150,6 +151,19 @@ export function RepairRequestDetailPage() {
             const updated = await patchRepairRequestTake(id, true);
             setRequest(updated);
             showSuccess('Отмечено');
+        } catch (err) {
+            showError(formatApiError(err));
+        }
+    }
+
+    async function togglePublish() {
+        if (!id || !request) {
+            return;
+        }
+        try {
+            const updated = await publishRepairRequest(id, !request.isPublished);
+            setRequest(updated);
+            showSuccess(updated.isPublished ? 'Заявка опубликована для гостей' : 'Публикация снята');
         } catch (err) {
             showError(formatApiError(err));
         }
@@ -336,6 +350,25 @@ export function RepairRequestDetailPage() {
                             Синхронизировать с Трекером
                         </button>
                     ) : null}
+                </div>
+
+                <div className="repair-detail-tracker-footer" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                    <span className="muted-text" style={{ fontSize: '0.875rem', alignSelf: 'center' }}>
+                        Публичная видимость (для гостей по QR):
+                        {' '}
+                        {request.isPublished ? (
+                            <span className="status-pill status-pill--device-ok" style={{ verticalAlign: 'middle' }}>Опубликована</span>
+                        ) : (
+                            <span className="status-pill status-pill--request-closed" style={{ verticalAlign: 'middle' }}>Не опубликована</span>
+                        )}
+                    </span>
+                    <button
+                        type="button"
+                        className={`btn-compact ${request.isPublished ? 'btn-publish--active' : 'btn-publish'}`}
+                        onClick={() => void togglePublish()}
+                    >
+                        {request.isPublished ? 'Снять публикацию' : 'Опубликовать'}
+                    </button>
                 </div>
             </section>
 

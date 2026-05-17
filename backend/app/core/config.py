@@ -52,7 +52,7 @@ class ServerConfig(BaseSettings):
     public_frontend_base_url: str = Field(
         default="https://fixmykit.local",
         alias="PUBLIC_FRONTEND_BASE_URL",
-        description="Базовый URL фронта для QR (страница заявки с deviceId).",
+        description="Базовый URL фронта для QR (публичная страница устройства /device/{id}/public).",
     )
     cors_origins: str = Field(
         default="",

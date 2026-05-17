@@ -45,6 +45,10 @@ class RepairRequestUpdate(BaseModel):
     taken_by_sysadmin_at: datetime | None = None
 
 
+class RepairRequestPublish(BaseModel):
+    is_published: bool
+
+
 class RepairRequestResponse(RepairRequestBase):
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,6 +57,7 @@ class RepairRequestResponse(RepairRequestBase):
     closed_by_user_id: UUID | None
     taken_by_sysadmin_by_user_id: UUID | None
     status: RequestStatus
+    is_published: bool = False
     taken_by_sysadmin_at: datetime | None = None
     resolution_note: str | None = None
     resolution_desc: str | None = None

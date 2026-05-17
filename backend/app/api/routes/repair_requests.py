@@ -18,6 +18,7 @@ from backend.app.schemas.repair_request import (
     RepairRequestCreate,
     RepairRequestDetail,
     RepairRequestList,
+    RepairRequestPublish,
     RepairRequestResponse,
     RepairRequestStatusUpdate,
     RepairRequestTake,
@@ -337,6 +338,20 @@ def close_repair_request(
         payload.resolution_note,
         payload.resolution_desc,
     )
+    db.commit()
+    db.refresh(repair_request)
+    return RepairRequestDetail.model_validate(repair_request)
+
+
+@router.patch("/repair-requests/{request_id}/publish", response_model=RepairRequestDetail)
+def publish_repair_request(
+    request_id: UUID,
+    payload: RepairRequestPublish,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_or_sysadmin),
+) -> RepairRequestDetail:
+    repair_request = get_repair_request_or_404(db, request_id)
+    repair_request.is_published = payload.is_published
     db.commit()
     db.refresh(repair_request)
     return RepairRequestDetail.model_validate(repair_request)
