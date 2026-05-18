@@ -32,6 +32,7 @@ from backend.app.services.tracker_service import (
     SYSADMIN_RETURNED_TRACKER_COMMENT,
     SYSADMIN_TAKEN_TRACKER_COMMENT,
     post_issue_comment,
+    tracker_comment_status_sync,
 )
 
 logger = logging.getLogger(__name__)
@@ -145,25 +146,25 @@ def _find_repair_request(
     return q.filter(RepairRequest.tracker_ticket_id == issue_id).first()
 
 
-def _post_sysadmin_tracker_comment(
-    repair_request: RepairRequest, *, taken: bool
+def _post_tracker_comment(
+    repair_request: RepairRequest,
+    text: str,
+    *,
+    log_event: str,
 ) -> None:
-    """Ответный комментарий в задачу"""
+    """Комментарий в задачу (TRACKER_TOKEN). Ошибка Трекера не ломает вебхук."""
     issue_ref = (
         repair_request.tracker_ticket_key or repair_request.tracker_ticket_id or ""
     ).strip()
     if not issue_ref:
         return
-    text = (
-        SYSADMIN_TAKEN_TRACKER_COMMENT if taken else SYSADMIN_RETURNED_TRACKER_COMMENT
-    )
     try:
         post_issue_comment(issue_ref, text)
     except TrackerUnavailableError as exc:
         logger.warning(
-            "tracker_sysadmin_comment_failed issue_ref=%s taken=%s: %s",
+            "tracker_%s_comment_failed issue_ref=%s: %s",
+            log_event,
             issue_ref,
-            taken,
             exc.message,
         )
 
@@ -185,6 +186,7 @@ def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
         "Один URL. В JSON: `tracker_status` = `{{issue.status}}` — строка как в Трекере, "
         "точное совпадение с ключами в `TRACKER_STATUS_ALIASES`. "
         "Пустой `tracker_status` — заявку не меняем (noop). Закрытие только при статусе «Закрыт». "
+        "После смены статуса в БД — красный комментарий в задачу. "
         f"Заголовок `{TRACKER_WEBHOOK_SECRET_HEADER}` = `TRACKER_WEBHOOK_SECRET`."
     ),
 )
@@ -252,6 +254,11 @@ def yandex_tracker_close_repair_request(
             payload.resolution_desc,
         )
         db.commit()
+        _post_tracker_comment(
+            repair_request,
+            tracker_comment_status_sync(raw_status),
+            log_event="status_sync",
+        )
         return YandexTrackerWebhookResponse(
             status="closed",
             repair_request_id=rid,
@@ -277,6 +284,11 @@ def yandex_tracker_close_repair_request(
         note=f"Статус из Трекера: {raw_status}",
     )
     db.commit()
+    _post_tracker_comment(
+        repair_request,
+        tracker_comment_status_sync(raw_status),
+        log_event="status_sync",
+    )
 
     return YandexTrackerWebhookResponse(
         status="updated",
@@ -335,7 +347,9 @@ def yandex_tracker_sysadmin_taken(
         actor = _resolve_closed_by_user(db, payload.user, _webhook_fallback_user(db))
         record_sysadmin_taken(db, repair_request, actor)
         db.commit()
-        _post_sysadmin_tracker_comment(repair_request, taken=True)
+        _post_tracker_comment(
+            repair_request, SYSADMIN_TAKEN_TRACKER_COMMENT, log_event="sysadmin_taken"
+        )
         return YandexTrackerWebhookResponse(
             status="updated",
             repair_request_id=rid,
@@ -354,7 +368,9 @@ def yandex_tracker_sysadmin_taken(
         )
     record_sysadmin_returned(db, repair_request)
     db.commit()
-    _post_sysadmin_tracker_comment(repair_request, taken=False)
+    _post_tracker_comment(
+        repair_request, SYSADMIN_RETURNED_TRACKER_COMMENT, log_event="sysadmin_returned"
+    )
     return YandexTrackerWebhookResponse(
         status="updated",
         repair_request_id=rid,

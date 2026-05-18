@@ -188,11 +188,22 @@ def sync_repair_request_to_tracker(repair_request: RepairRequest) -> TrackerIssu
     return _create_issue(repair_request)
 
 
-SYSADMIN_TAKEN_TRACKER_COMMENT = (
-    "В **Fix My Kit** добавлена пометка: устройство **забрал системный администратор**."
+def yfm_red(text: str) -> str:
+    """Красный текст в комментарии Tracker (YFM, markupType=md)"""
+    return f"{{red}}({text})"
+
+
+def tracker_comment_status_sync(tracker_status_label: str) -> str:
+    """Комментарий после синхронизации статуса из вебхука"""
+    label = (tracker_status_label or "").strip() or "—"
+    return yfm_red(f"В Fix My Kit синхронизирован статус заявки: **{label}**")
+
+
+SYSADMIN_TAKEN_TRACKER_COMMENT = yfm_red(
+    "В Fix My Kit добавлена пометка: устройство **забрал системный администратор**."
 )
-SYSADMIN_RETURNED_TRACKER_COMMENT = (
-    "В **Fix My Kit** снята пометка «забрал сисадмин» — устройство на месте."
+SYSADMIN_RETURNED_TRACKER_COMMENT = yfm_red(
+    "В Fix My Kit снята пометка «забрал сисадмин» — устройство на месте."
 )
 
 
