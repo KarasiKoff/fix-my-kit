@@ -15,8 +15,8 @@ from backend.app.schemas.admin_stats import (
     RepairRequestStats,
 )
 
-WONT_FIX_PATTERN = "не будет исправлено"
-RESOLVED_PATTERNS: tuple[str, ...] = ("Решен", "Решён")
+RESOLUTION_WONT_FIX = "Не будет исправлено"
+RESOLUTION_RESOLVED = "Решен"
 
 
 def _date_range_bounds(date_from: date | None, date_to: date | None) -> tuple[datetime | None, datetime | None]:
@@ -46,28 +46,11 @@ def _sync_in_range(start: datetime | None, end: datetime | None):
     return and_(*clauses)
 
 
-def _resolution_matches(pattern: str):
-    like = f"%{pattern}%"
-    return or_(
-        RepairRequest.resolution_note.ilike(like),
-        RepairRequest.resolution_desc.ilike(like),
-    )
-
-
-def _wont_fix_condition():
-    return _resolution_matches(WONT_FIX_PATTERN)
-
-
-def _resolved_condition():
-    return or_(*(_resolution_matches(pattern) for pattern in RESOLVED_PATTERNS))
-
-
 def build_admin_stats(db: Session, date_from: date | None, date_to: date | None) -> AdminStatsResponse:
     start, end = _date_range_bounds(date_from, date_to)
     created_filter = _created_in_range(start, end)
     sync_filter = _sync_in_range(start, end)
-    wont_fix = _wont_fix_condition()
-    closed_in_period = RepairRequest.status == RequestStatus.CLOSED
+    closed = RepairRequest.status == RequestStatus.CLOSED
 
     total_q = db.query(func.count(RepairRequest.id))
     if created_filter is not None:
@@ -86,12 +69,23 @@ def build_admin_stats(db: Session, date_from: date | None, date_to: date | None)
         in_progress_q = in_progress_q.filter(created_filter)
     in_progress = int(in_progress_q.scalar() or 0)
 
-    wont_fix_q = db.query(func.count(RepairRequest.id)).filter(closed_in_period, wont_fix)
+    wont_fix_q = db.query(func.count(RepairRequest.id)).filter(
+        closed,
+        or_(
+            RepairRequest.resolution_note == RESOLUTION_WONT_FIX,
+            RepairRequest.resolution_desc == RESOLUTION_WONT_FIX,
+        ),
+    )
     if created_filter is not None:
         wont_fix_q = wont_fix_q.filter(created_filter)
     wont_fix_count = int(wont_fix_q.scalar() or 0)
 
-    resolved_q = db.query(func.count(RepairRequest.id)).filter(_resolved_condition())
+    resolved_q = db.query(func.count(RepairRequest.id)).filter(
+        or_(
+            RepairRequest.resolution_note == RESOLUTION_RESOLVED,
+            RepairRequest.resolution_desc == RESOLUTION_RESOLVED,
+        ),
+    )
     if created_filter is not None:
         resolved_q = resolved_q.filter(created_filter)
     resolved = int(resolved_q.scalar() or 0)
