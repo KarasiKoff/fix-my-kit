@@ -1,6 +1,7 @@
 """Входящие HTTP-вызовы из триггеров Yandex Tracker"""
 
 import hmac
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -14,6 +15,7 @@ from backend.app.models.enums import RepairStatus, RequestStatus
 from backend.app.models.repair_request import RepairRequest
 from backend.app.models.user import User
 from backend.app.schemas.tracker_webhook import (
+    YandexTrackerSysadminTakenPayload,
     YandexTrackerWebhookPayload,
     YandexTrackerWebhookResponse,
 )
@@ -21,6 +23,19 @@ from backend.app.services.repair_history_service import add_repair_history
 from backend.app.services.repair_request_closure_service import (
     record_repair_request_closed,
 )
+from backend.app.services.repair_request_sysadmin_taken_service import (
+    record_sysadmin_returned,
+    record_sysadmin_taken,
+)
+from backend.app.services.tracker_service import (
+    TrackerUnavailableError,
+    SYSADMIN_RETURNED_TRACKER_COMMENT,
+    SYSADMIN_TAKEN_TRACKER_COMMENT,
+    post_issue_comment,
+    tracker_comment_status_sync,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
@@ -109,6 +124,19 @@ def _verify_webhook_secret(header_value: str | None) -> None:
         )
 
 
+def _webhook_fallback_user(db: Session) -> User:
+    login = (
+        settings.server.tracker_webhook_actor_login or "tracker_webhook"
+    ).strip() or "tracker_webhook"
+    fallback = db.query(User).filter(User.login == login).first()
+    if fallback is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="webhook_actor_missing_restart_app",
+        )
+    return fallback
+
+
 def _find_repair_request(
     db: Session, issue_key: str, issue_id: str
 ) -> RepairRequest | None:
@@ -116,6 +144,29 @@ def _find_repair_request(
     if issue_key:
         return q.filter(RepairRequest.tracker_ticket_key == issue_key).first()
     return q.filter(RepairRequest.tracker_ticket_id == issue_id).first()
+
+
+def _post_tracker_comment(
+    repair_request: RepairRequest,
+    text: str,
+    *,
+    log_event: str,
+) -> None:
+    """Комментарий в задачу (TRACKER_TOKEN). Ошибка Трекера не ломает вебхук."""
+    issue_ref = (
+        repair_request.tracker_ticket_key or repair_request.tracker_ticket_id or ""
+    ).strip()
+    if not issue_ref:
+        return
+    try:
+        post_issue_comment(issue_ref, text)
+    except TrackerUnavailableError as exc:
+        logger.warning(
+            "tracker_%s_comment_failed issue_ref=%s: %s",
+            log_event,
+            issue_ref,
+            exc.message,
+        )
 
 
 def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
@@ -135,6 +186,7 @@ def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
         "Один URL. В JSON: `tracker_status` = `{{issue.status}}` — строка как в Трекере, "
         "точное совпадение с ключами в `TRACKER_STATUS_ALIASES`. "
         "Пустой `tracker_status` — заявку не меняем (noop). Закрытие только при статусе «Закрыт». "
+        "После смены статуса в БД — красный комментарий в задачу. "
         f"Заголовок `{TRACKER_WEBHOOK_SECRET_HEADER}` = `TRACKER_WEBHOOK_SECRET`."
     ),
 )
@@ -192,15 +244,7 @@ def yandex_tracker_close_repair_request(
     rid = str(repair_request.id)
 
     if target == RequestStatus.CLOSED:
-        login = (
-            settings.server.tracker_webhook_actor_login or "tracker_webhook"
-        ).strip() or "tracker_webhook"
-        fallback = db.query(User).filter(User.login == login).first()
-        if fallback is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="webhook_actor_missing_restart_app",
-            )
+        fallback = _webhook_fallback_user(db)
         closer = _resolve_closed_by_user(db, payload.user, fallback)
         record_repair_request_closed(
             db,
@@ -210,6 +254,11 @@ def yandex_tracker_close_repair_request(
             payload.resolution_desc,
         )
         db.commit()
+        _post_tracker_comment(
+            repair_request,
+            tracker_comment_status_sync(raw_status),
+            log_event="status_sync",
+        )
         return YandexTrackerWebhookResponse(
             status="closed",
             repair_request_id=rid,
@@ -235,6 +284,11 @@ def yandex_tracker_close_repair_request(
         note=f"Статус из Трекера: {raw_status}",
     )
     db.commit()
+    _post_tracker_comment(
+        repair_request,
+        tracker_comment_status_sync(raw_status),
+        log_event="status_sync",
+    )
 
     return YandexTrackerWebhookResponse(
         status="updated",
@@ -242,4 +296,85 @@ def yandex_tracker_close_repair_request(
         detail=None,
         request_status=target.value,
         closed_by_login=None,
+    )
+
+
+@router.post(
+    "/yandex-tracker/sysadmin-taken",
+    response_model=YandexTrackerWebhookResponse,
+    summary="Отметка «забрал / вернул сисадмин» из Yandex Tracker",
+    description=(
+        "Отдельный триггер по макросу."
+        "После успешной отметки в БД в задачу пишется комментарий от TRACKER_TOKEN"
+    ),
+)
+def yandex_tracker_sysadmin_taken(
+    payload: YandexTrackerSysadminTakenPayload,
+    db: Session = Depends(get_db),
+    x_tracker_webhook_secret: Annotated[
+        str | None, Header(alias=TRACKER_WEBHOOK_SECRET_HEADER)
+    ] = None,
+) -> YandexTrackerWebhookResponse:
+    _verify_webhook_secret(x_tracker_webhook_secret)
+
+    key = (payload.issue_key or "").strip()
+    iid = (payload.issue_id or "").strip()
+    repair_request = _find_repair_request(db, key, iid)
+    if repair_request is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="repair_request_not_found_for_tracker_issue",
+        )
+
+    if repair_request.status == RequestStatus.CLOSED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="repair_request_closed",
+        )
+
+    rid = str(repair_request.id)
+    already_taken = repair_request.taken_by_sysadmin_at is not None
+
+    if payload.sysadmin_taken:
+        if already_taken:
+            return YandexTrackerWebhookResponse(
+                status="noop",
+                repair_request_id=rid,
+                detail="already_taken_by_sysadmin",
+                request_status=repair_request.status.value,
+                taken_by_sysadmin=True,
+            )
+        actor = _resolve_closed_by_user(db, payload.user, _webhook_fallback_user(db))
+        record_sysadmin_taken(db, repair_request, actor)
+        db.commit()
+        _post_tracker_comment(
+            repair_request, SYSADMIN_TAKEN_TRACKER_COMMENT, log_event="sysadmin_taken"
+        )
+        return YandexTrackerWebhookResponse(
+            status="updated",
+            repair_request_id=rid,
+            detail=None,
+            request_status=repair_request.status.value,
+            taken_by_sysadmin=True,
+        )
+
+    if not already_taken:
+        return YandexTrackerWebhookResponse(
+            status="noop",
+            repair_request_id=rid,
+            detail="not_taken_by_sysadmin",
+            request_status=repair_request.status.value,
+            taken_by_sysadmin=False,
+        )
+    record_sysadmin_returned(db, repair_request)
+    db.commit()
+    _post_tracker_comment(
+        repair_request, SYSADMIN_RETURNED_TRACKER_COMMENT, log_event="sysadmin_returned"
+    )
+    return YandexTrackerWebhookResponse(
+        status="updated",
+        repair_request_id=rid,
+        detail=None,
+        request_status=repair_request.status.value,
+        taken_by_sysadmin=False,
     )

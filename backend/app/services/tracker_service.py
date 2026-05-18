@@ -111,12 +111,22 @@ def _requester_line(repair_request: RepairRequest) -> str:
 def _build_issue_payload(repair_request: RepairRequest, queue: str) -> dict:
     device = repair_request.device
     device_name = device.name if device is not None else "устройство (нет данных)"
-    audience_name = device.audience.name if device is not None and device.audience is not None else None
+    audience_name = (
+        device.audience.name
+        if device is not None and device.audience is not None
+        else None
+    )
     inv = device.inventory_number if device is not None else None
-    audience_display = audience_name.strip() if audience_name and str(audience_name).strip() else "—"
+    audience_display = (
+        audience_name.strip() if audience_name and str(audience_name).strip() else "—"
+    )
     inv_display = inv if inv else "—"
 
-    audience_part = f", аудитория {audience_name}" if audience_name and str(audience_name).strip() else ""
+    audience_part = (
+        f", аудитория {audience_name}"
+        if audience_name and str(audience_name).strip()
+        else ""
+    )
     summary = f"Ремонт: {device_name}{audience_part}"
     summary = summary[:255]
 
@@ -137,6 +147,9 @@ def _build_issue_payload(repair_request: RepairRequest, queue: str) -> dict:
         "",
         "### Описание проблемы",
         quoted_desc,
+        "",
+        "### Ссылка на заявку в Fix My Kit",
+        f"https://app.fixmykit.karasikoff.ru/requests/{repair_request.id}",
         "",
         "### Отладка",
         f"- **id заявки:** `{repair_request.id}`",
@@ -176,3 +189,38 @@ def sync_repair_request_to_tracker(repair_request: RepairRequest) -> TrackerIssu
     if issue_ref:
         return _fetch_issue(base_url, token, org_id, issue_ref)
     return _create_issue(repair_request)
+
+
+def yfm_red(text: str) -> str:
+    """Красный текст в комментарии Tracker (YFM, markupType=md)"""
+    return f"{{red}}({text})"
+
+
+def tracker_comment_status_sync(tracker_status_label: str) -> str:
+    """Комментарий после синхронизации статуса из вебхука"""
+    label = (tracker_status_label or "").strip() or "—"
+    return yfm_red(f"В Fix My Kit синхронизирован статус заявки: **{label}**")
+
+
+SYSADMIN_TAKEN_TRACKER_COMMENT = yfm_red(
+    "В Fix My Kit добавлена пометка: устройство **забрал системный администратор**."
+)
+SYSADMIN_RETURNED_TRACKER_COMMENT = yfm_red(
+    "В Fix My Kit снята пометка «забрал сисадмин» — устройство на месте."
+)
+
+
+def post_issue_comment(issue_ref: str, text: str, *, markup_md: bool = True) -> None:
+    """Комментарий в задачу от имени OAuth-токена"""
+    ref = (issue_ref or "").strip()
+    if not ref:
+        raise TrackerUnavailableError("tracker_issue_ref_missing")
+    if not (text or "").strip():
+        raise TrackerUnavailableError("tracker_comment_text_empty")
+    base_url, token, org_id, _ = _require_tracker_config()
+    safe_ref = quote(ref, safe="")
+    url = f"{base_url}/issues/{safe_ref}/comments"
+    payload: dict = {"text": text.strip()}
+    if markup_md:
+        payload["markupType"] = "md"
+    _request_json("POST", url, token=token, org_id=org_id, data=payload)
