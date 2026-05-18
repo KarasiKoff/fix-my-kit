@@ -9,6 +9,9 @@ from backend.app.models.enums import RepairStatus, RequestStatus
 from backend.app.models.repair_request import RepairRequest
 from backend.app.models.user import User
 from backend.app.services.repair_history_service import add_repair_history
+from backend.app.services.repair_request_sysadmin_taken_service import (
+    clear_sysadmin_taken_fields,
+)
 
 
 def apply_closed_fields(
@@ -24,6 +27,7 @@ def apply_closed_fields(
         repair_request.resolution_note = resolution_note
     if resolution_desc is not None:
         repair_request.resolution_desc = resolution_desc
+    clear_sysadmin_taken_fields(repair_request)
 
 
 def record_repair_request_closed(
