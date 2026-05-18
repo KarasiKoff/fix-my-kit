@@ -242,18 +242,22 @@ export function RepairRequestDetailPage() {
             <section className="card card-form card--narrow-device repair-detail-card">
                 <div className="device-title-row repair-detail-head">
                     <p className="repair-detail-status-line">
-                        <strong>Статус:</strong>
                         <span className={repairRequestStatusPillClass(request.status)}>{repairRequestStatusLabel(request.status)}</span>
                         {synced ? (
-                            <span className="badge ok">Трекер</span>
+                            <span className="status-pill status-pill--tracker-synced">Трекер</span>
                         ) : (
-                            <span className="badge danger">Нет в Трекере</span>
+                            <span className="status-pill status-pill--tracker-missing">Нет в Трекере</span>
                         )}
                         {workflowBubble ? (
                             <span className={workflowBubble.className} title={workflowBubble.label}>
                                 {workflowBubble.label}
                             </span>
                         ) : null}
+                        {request.isPublished ? (
+                            <span className="status-pill status-pill--device-ok">Опубликована</span>
+                        ) : (
+                            <span className="status-pill status-pill--request-closed">Не опубликована</span>
+                        )}
                         <span className="repair-detail-status-inline-sep" aria-hidden="true" />
                         <span className="repair-detail-status-kv repair-detail-status-kv--resolution">
                             <strong>Резолюция:</strong>{' '}
@@ -321,50 +325,40 @@ export function RepairRequestDetailPage() {
                         <p className="request-description-block">{request.description}</p>
                     </li>
                 </ul>
-                <div className="repair-detail-tracker-footer repair-detail-tracker-footer--row">
-                    {trackerHref ? (
-                        <a
-                            href={trackerHref}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
-                        >
-                            Перейти в Tracker
-                        </a>
-                    ) : (
-                        <button
-                            type="button"
-                            className="repair-tracker-footer-btn repair-tracker-footer-btn--muted"
-                            disabled
-                            title="Сначала синхронизируйте заявку — появится ссылка на тикет в Трекере"
-                        >
-                            Перейти в Tracker
-                        </button>
-                    )}
-                    {!trackerHref ? (
-                        <button
-                            type="button"
-                            className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
-                            onClick={() => void trySync()}
-                        >
-                            Синхронизировать с Трекером
-                        </button>
-                    ) : null}
-                </div>
-
-                <div className="repair-detail-tracker-footer" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-                    <span className="muted-text" style={{ fontSize: '0.875rem', alignSelf: 'center' }}>
-                        Публичная видимость (для гостей по QR):
-                        {' '}
-                        {request.isPublished ? (
-                            <span className="status-pill status-pill--device-ok" style={{ verticalAlign: 'middle' }}>Опубликована</span>
+                <div className="repair-detail-tracker-actions">
+                    <div className="repair-detail-tracker-footer repair-detail-tracker-footer--stacked">
+                        {trackerHref ? (
+                            <a
+                                href={trackerHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
+                            >
+                                Перейти в Tracker
+                            </a>
                         ) : (
-                            <span className="status-pill status-pill--request-closed" style={{ verticalAlign: 'middle' }}>Не опубликована</span>
+                            <button
+                                type="button"
+                                className="repair-tracker-footer-btn repair-tracker-footer-btn--muted"
+                                disabled
+                                title="Сначала синхронизируйте заявку — появится ссылка на тикет в Трекере"
+                            >
+                                Перейти в Tracker
+                            </button>
                         )}
-                    </span>
+                        {!trackerHref ? (
+                            <button
+                                type="button"
+                                className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
+                                onClick={() => void trySync()}
+                            >
+                                Синхронизировать с Трекером
+                            </button>
+                        ) : null}
+                    </div>
                     <button
                         type="button"
-                        className={`btn-compact ${request.isPublished ? 'btn-publish--active' : 'btn-publish'}`}
+                        className={`repair-detail-publish-btn ${request.isPublished ? 'btn-publish--active' : 'btn-publish'}`}
                         onClick={() => void togglePublish()}
                     >
                         {request.isPublished ? 'Снять публикацию' : 'Опубликовать'}

@@ -911,6 +911,18 @@ td.table-col-start {
   border: 1px solid rgba(248, 113, 113, 0.35);
 }
 
+.status-pill--tracker-synced {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+}
+
+.status-pill--tracker-missing {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
 td.status-cell {
   vertical-align: middle;
 }
@@ -999,9 +1011,26 @@ td.status-cell {
   min-width: 0;
 }
 
-.repair-request-form button[type='submit'].btn-primary {
+.repair-request-form button[type='submit'].btn-primary,
+.public-device-submit a.btn-primary {
   margin-top: 2px;
   width: 100%;
+  border-radius: 11px;
+  font-family: inherit;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.public-device-submit {
+  margin-top: 20px;
+}
+
+.public-device-submit a.btn-primary:hover {
+  color: #0b0e14;
 }
 
 .repair-request-form textarea {
@@ -1253,6 +1282,47 @@ td.status-cell {
 
 .repair-detail-tracker-footer--row .repair-tracker-footer-btn {
   margin-inline: 0;
+}
+
+.repair-detail-tracker-actions {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.repair-detail-tracker-footer--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.repair-detail-tracker-actions .repair-tracker-footer-btn {
+  width: 100%;
+}
+
+.repair-detail-publish-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 22px;
+  min-height: 44px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease;
 }
 
 .repair-tracker-footer-btn {
