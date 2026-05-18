@@ -5,6 +5,7 @@ export type AdminStats = {
     dateTo: string | null;
     repairRequests: {
         total: number;
+        open: number;
         inProgress: number;
         resolved: number;
         wontFix: number;
@@ -35,6 +36,7 @@ type AdminStatsApi = {
     date_to: string | null;
     repair_requests: {
         total: number;
+        open: number;
         in_progress: number;
         resolved: number;
         wont_fix: number;
@@ -66,6 +68,7 @@ function mapStats(data: AdminStatsApi): AdminStats {
         dateTo: data.date_to,
         repairRequests: {
             total: data.repair_requests.total,
+            open: data.repair_requests.open,
             inProgress: data.repair_requests.in_progress,
             resolved: data.repair_requests.resolved,
             wontFix: data.repair_requests.wont_fix,

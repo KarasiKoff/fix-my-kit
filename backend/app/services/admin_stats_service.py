@@ -16,6 +16,9 @@ from backend.app.schemas.admin_stats import (
     TrackerSyncEvent,
 )
 
+WONT_FIX_PATTERN = "не будет исправлено"
+
+
 def _date_range_bounds(date_from: date | None, date_to: date | None) -> tuple[datetime | None, datetime | None]:
     start = datetime.combine(date_from, time.min, tzinfo=timezone.utc) if date_from else None
     end = datetime.combine(date_to, time.max, tzinfo=timezone.utc) if date_to else None
@@ -31,15 +34,6 @@ def _created_in_range(start: datetime | None, end: datetime | None):
     return and_(*clauses) if clauses else None
 
 
-def _closed_in_range(start: datetime | None, end: datetime | None):
-    clauses = [RepairRequest.status == RequestStatus.CLOSED]
-    if start is not None:
-        clauses.append(RepairRequest.closed_at >= start)
-    if end is not None:
-        clauses.append(RepairRequest.closed_at <= end)
-    return and_(*clauses)
-
-
 def _sync_in_range(start: datetime | None, end: datetime | None):
     clauses = [
         RepairRequest.tracker_ticket_id.isnot(None),
@@ -53,7 +47,7 @@ def _sync_in_range(start: datetime | None, end: datetime | None):
 
 
 def _wont_fix_condition():
-    like = "%не исправлено%"
+    like = f"%{WONT_FIX_PATTERN}%"
     return or_(
         RepairRequest.resolution_note.ilike(like),
         RepairRequest.resolution_desc.ilike(like),
@@ -63,26 +57,35 @@ def _wont_fix_condition():
 def build_admin_stats(db: Session, date_from: date | None, date_to: date | None) -> AdminStatsResponse:
     start, end = _date_range_bounds(date_from, date_to)
     created_filter = _created_in_range(start, end)
-    closed_filter = _closed_in_range(start, end)
     sync_filter = _sync_in_range(start, end)
     wont_fix = _wont_fix_condition()
+    closed_in_period = RepairRequest.status == RequestStatus.CLOSED
 
     total_q = db.query(func.count(RepairRequest.id))
     if created_filter is not None:
         total_q = total_q.filter(created_filter)
     total = int(total_q.scalar() or 0)
 
+    open_q = db.query(func.count(RepairRequest.id)).filter(RepairRequest.status == RequestStatus.OPEN)
+    if created_filter is not None:
+        open_q = open_q.filter(created_filter)
+    open_count = int(open_q.scalar() or 0)
+
     in_progress_q = db.query(func.count(RepairRequest.id)).filter(
-        RepairRequest.status.in_((RequestStatus.OPEN, RequestStatus.IN_PROGRESS)),
+        RepairRequest.status == RequestStatus.IN_PROGRESS,
     )
     if created_filter is not None:
         in_progress_q = in_progress_q.filter(created_filter)
     in_progress = int(in_progress_q.scalar() or 0)
 
-    wont_fix_q = db.query(func.count(RepairRequest.id)).filter(closed_filter, wont_fix)
+    wont_fix_q = db.query(func.count(RepairRequest.id)).filter(closed_in_period, wont_fix)
+    if created_filter is not None:
+        wont_fix_q = wont_fix_q.filter(created_filter)
     wont_fix_count = int(wont_fix_q.scalar() or 0)
 
-    resolved_q = db.query(func.count(RepairRequest.id)).filter(closed_filter, ~wont_fix)
+    resolved_q = db.query(func.count(RepairRequest.id)).filter(closed_in_period, ~wont_fix)
+    if created_filter is not None:
+        resolved_q = resolved_q.filter(created_filter)
     resolved = int(resolved_q.scalar() or 0)
 
     tracker_synced = int(db.query(func.count(RepairRequest.id)).filter(sync_filter).scalar() or 0)
@@ -163,6 +166,7 @@ def build_admin_stats(db: Session, date_from: date | None, date_to: date | None)
         date_to=date_to,
         repair_requests=RepairRequestStats(
             total=total,
+            open=open_count,
             in_progress=in_progress,
             resolved=resolved,
             wont_fix=wont_fix_count,

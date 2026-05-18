@@ -156,9 +156,10 @@ export function RepairRequests() {
                         onChange={(v) => setDraftFilters((p) => ({ ...p, applicant: v }))}
                         fetchSuggestions={suggest('applicant')}
                     />
-                    <label className="filter-select-field">
-                        Статус
+                    <div className="filter-select-field">
+                        <span className="filter-combobox-label">Статус</span>
                         <select
+                            className={`filter-select-field-input${draftFilters.status === '' ? ' is-empty' : ''}`}
                             value={draftFilters.status}
                             onChange={(event) =>
                                 setDraftFilters((p) => ({ ...p, status: event.target.value as RequestFilters['status'] }))
@@ -169,7 +170,7 @@ export function RepairRequests() {
                             <option value="in_progress">{repairRequestStatusLabel('in_progress')}</option>
                             <option value="closed">{repairRequestStatusLabel('closed')}</option>
                         </select>
-                    </label>
+                    </div>
                 </div>
                 <div className="filter-actions">
                     <button type="button" className="btn-primary" disabled={!filtersPending} onClick={applyFilters}>

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 class RepairRequestStats(BaseModel):
     total: int
+    open: int
     in_progress: int
     resolved: int
     wont_fix: int

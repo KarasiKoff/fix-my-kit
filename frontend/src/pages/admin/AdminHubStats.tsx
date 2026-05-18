@@ -4,6 +4,7 @@ import { fetchAdminStats, type AdminStats } from '../../api/adminStats';
 import { syncAllUnsynchronizedRepairRequests } from '../../api/repairRequests';
 import {
     IconCalendar,
+    IconKpiOpen,
     IconKpiProgress,
     IconKpiResolved,
     IconKpiTotal,
@@ -48,6 +49,14 @@ const KPI_CARDS = [
         Icon: IconKpiTotal,
         deltaClass: 'admin-stats-kpi-delta--total',
         getValue: (s: AdminStats) => s.repairRequests.total,
+    },
+    {
+        key: 'open',
+        label: 'Открытых',
+        iconClass: 'admin-stats-kpi-icon-wrap--open',
+        Icon: IconKpiOpen,
+        deltaClass: 'admin-stats-kpi-delta--open',
+        getValue: (s: AdminStats) => s.repairRequests.open,
     },
     {
         key: 'in_progress',

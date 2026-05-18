@@ -2157,7 +2157,7 @@ tbody tr:hover {
 
 .admin-stats-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -2202,6 +2202,11 @@ tbody tr:hover {
   color: #a5b8ff;
 }
 
+.admin-stats-kpi-icon-wrap--open {
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+}
+
 .admin-stats-kpi-icon-wrap--progress {
   background: rgba(251, 191, 36, 0.2);
   color: #fcd34d;
@@ -2239,6 +2244,10 @@ tbody tr:hover {
 
 .admin-stats-kpi-delta--total {
   color: #a5b8ff;
+}
+
+.admin-stats-kpi-delta--open {
+  color: #7dd3fc;
 }
 
 .admin-stats-kpi-delta--progress {
@@ -3182,18 +3191,26 @@ tbody tr:hover {
 }
 
 .filter-combobox-input,
-.filter-select-field select {
+.filter-select-field-input {
   width: 100%;
   padding: var(--control-padding-y) calc(var(--control-padding-x) + 1.75rem) var(--control-padding-y)
     var(--control-padding-x);
+  font-family: inherit;
   font-size: var(--control-font);
+  font-weight: 400;
+  line-height: 1.4;
   border-radius: 10px;
   border: 1px solid var(--border-subtle);
   background-color: var(--bg-input);
   color: var(--text-primary);
 }
 
+.filter-select-field-input.is-empty {
+  color: #6b7280;
+}
+
 .filter-select-field {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
