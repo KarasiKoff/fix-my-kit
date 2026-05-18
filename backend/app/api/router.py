@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from backend.app.api.routes.admin_stats import router as admin_stats_router
 from backend.app.api.routes.auth import router as auth_router
 from backend.app.api.routes.devices import router as devices_router
 from backend.app.api.routes.categories import router as categories_router
@@ -12,6 +13,7 @@ from backend.app.api.routes.users import router as users_router
 from backend.app.api.routes.webhooks import router as webhooks_router
 
 api_router = APIRouter()
+api_router.include_router(admin_stats_router)
 api_router.include_router(auth_router)
 api_router.include_router(devices_router)
 api_router.include_router(categories_router)
