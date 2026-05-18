@@ -84,7 +84,7 @@ def get_public_repair_summary(device_id: UUID, db: Session = Depends(get_db)) ->
                 )
             else:
                 has_unpublished_active = True
-        elif rr.status == RequestStatus.CLOSED:
+        elif rr.status == RequestStatus.CLOSED and rr.is_published:
             history.append(
                 PublicRepairRequestItem(
                     id=rr.id,

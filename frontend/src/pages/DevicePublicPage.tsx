@@ -134,6 +134,7 @@ export function DevicePublicPage() {
 
     const { device, activeRequest, hasUnpublishedActive, history } = summary;
     const hasAnyHistory = history.length > 0;
+    const canSubmitNewRequest = !activeRequest && !hasUnpublishedActive;
 
     return (
         <main className="page page--centered">
@@ -168,15 +169,13 @@ export function DevicePublicPage() {
                         </li>
                     ) : null}
                 </ul>
-                <div style={{ marginTop: 20 }}>
-                    <Link
-                        to={`/repair?deviceId=${device.id}`}
-                        className="device-detail-actions__primary"
-                        style={{ display: 'inline-flex', textDecoration: 'none' }}
-                    >
-                        Подать заявку на ремонт
-                    </Link>
-                </div>
+                {canSubmitNewRequest ? (
+                    <div className="public-device-submit">
+                        <Link to={`/repair?deviceId=${device.id}`} className="btn-primary">
+                            Подать заявку на ремонт
+                        </Link>
+                    </div>
+                ) : null}
             </section>
 
             {/* Active request */}
