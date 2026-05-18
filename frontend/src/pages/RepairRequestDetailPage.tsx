@@ -221,7 +221,7 @@ export function RepairRequestDetailPage() {
     const resolutionNoteTrimmed = noteParts.resolutionTrimmed;
     const resolutionDescTrimmed = request.resolutionDesc?.trim() ?? '';
     const closedByDisplayed = noteParts.closedFromMeta || closedByDbLabel || '';
-    const workflowBubble = repairRequestWorkflowBubble(request.status);
+    const workflowBubble = repairRequestWorkflowBubble(request.status, request.takenBySysadmin);
 
     return (
         <main className="page page--wide page--centered">
@@ -381,9 +381,11 @@ export function RepairRequestDetailPage() {
                                 Взять в работу
                             </button>
                         ) : null}
-                        <button type="button" className="btn-primary" onClick={() => void markTaken()}>
-                            Забрал сисадмин
-                        </button>
+                        {!request.takenBySysadmin ? (
+                            <button type="button" className="btn-primary" onClick={() => void markTaken()}>
+                                Забрал сисадмин
+                            </button>
+                        ) : null}
                         <div className="request-close-row">
                             <label>
                                 Примечание при закрытии

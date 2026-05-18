@@ -13,17 +13,17 @@ export function repairRequestStatusLabel(status: RepairRequest['status']): strin
 
 /**
  * Второй бейдж рядом со статусом заявки (не путать с основным «В работе» / «Закрыта»):
- * - in_progress → «Забрал сисадмин»
  * - closed → «Решён»
- * - new → скрыт
+ * - in_progress и takenBySysadmin → «Забрал сисадмин»
  */
 export function repairRequestWorkflowBubble(
     status: RepairRequest['status'],
+    takenBySysadmin: boolean,
 ): { label: string; className: string } | null {
     if (status === 'closed') {
         return { label: 'Решён', className: 'status-pill status-pill--request-resolved' };
     }
-    if (status === 'in_progress') {
+    if (status === 'in_progress' && takenBySysadmin) {
         return { label: 'Забрал сисадмин', className: 'status-pill status-pill--sysadmin-taken' };
     }
     return null;
