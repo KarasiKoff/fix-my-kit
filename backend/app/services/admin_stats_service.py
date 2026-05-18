@@ -16,17 +16,6 @@ from backend.app.schemas.admin_stats import (
     TrackerSyncEvent,
 )
 
-WONT_FIX_PATTERNS: tuple[str, ...] = (
-    "не будет исправлено",
-    "не исправляется",
-    "не исправляем",
-    "не исправлено",
-    "wontfix",
-    "won't fix",
-    "wont fix",
-)
-
-
 def _date_range_bounds(date_from: date | None, date_to: date | None) -> tuple[datetime | None, datetime | None]:
     start = datetime.combine(date_from, time.min, tzinfo=timezone.utc) if date_from else None
     end = datetime.combine(date_to, time.max, tzinfo=timezone.utc) if date_to else None
@@ -64,12 +53,11 @@ def _sync_in_range(start: datetime | None, end: datetime | None):
 
 
 def _wont_fix_condition():
-    text_matches = []
-    for pattern in WONT_FIX_PATTERNS:
-        like = f"%{pattern}%"
-        text_matches.append(RepairRequest.resolution_note.ilike(like))
-        text_matches.append(RepairRequest.resolution_desc.ilike(like))
-    return or_(*text_matches)
+    like = "%не исправлено%"
+    return or_(
+        RepairRequest.resolution_note.ilike(like),
+        RepairRequest.resolution_desc.ilike(like),
+    )
 
 
 def build_admin_stats(db: Session, date_from: date | None, date_to: date | None) -> AdminStatsResponse:

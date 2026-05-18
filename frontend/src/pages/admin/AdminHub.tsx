@@ -32,7 +32,7 @@ const hubItems = [
     {
         to: '/admin/add/room',
         title: 'Кабинеты',
-        description: 'Справочник кабинетов (audience)',
+        description: 'Справочник кабинетов',
         adminOnly: true,
         titleOnly: false,
         iconClass: 'admin-hub-card-icon--rooms',
