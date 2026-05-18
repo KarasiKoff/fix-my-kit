@@ -23,12 +23,6 @@ export type AdminStats = {
         sharePercent: number;
     }>;
     lastTrackerSyncAt: string | null;
-    recentTrackerSyncs: Array<{
-        repairRequestId: string;
-        trackerTicketKey: string | null;
-        trackerTicketUrl: string | null;
-        lastSyncAt: string;
-    }>;
 };
 
 type AdminStatsApi = {
@@ -54,12 +48,6 @@ type AdminStatsApi = {
         share_percent: number;
     }>;
     last_tracker_sync_at: string | null;
-    recent_tracker_syncs: Array<{
-        repair_request_id: string;
-        tracker_ticket_key: string | null;
-        tracker_ticket_url: string | null;
-        last_sync_at: string;
-    }>;
 };
 
 function mapStats(data: AdminStatsApi): AdminStats {
@@ -86,12 +74,6 @@ function mapStats(data: AdminStatsApi): AdminStats {
             sharePercent: row.share_percent,
         })),
         lastTrackerSyncAt: data.last_tracker_sync_at,
-        recentTrackerSyncs: data.recent_tracker_syncs.map((row) => ({
-            repairRequestId: row.repair_request_id,
-            trackerTicketKey: row.tracker_ticket_key,
-            trackerTicketUrl: row.tracker_ticket_url,
-            lastSyncAt: row.last_sync_at,
-        })),
     };
 }
 

@@ -26,13 +26,6 @@ class CategoryDeviceCount(BaseModel):
     share_percent: float
 
 
-class TrackerSyncEvent(BaseModel):
-    repair_request_id: UUID
-    tracker_ticket_key: str | None
-    tracker_ticket_url: str | None
-    last_sync_at: datetime
-
-
 class AdminStatsResponse(BaseModel):
     date_from: date | None
     date_to: date | None
@@ -40,4 +33,3 @@ class AdminStatsResponse(BaseModel):
     catalog: CatalogStats
     devices_by_category: list[CategoryDeviceCount]
     last_tracker_sync_at: datetime | None
-    recent_tracker_syncs: list[TrackerSyncEvent]

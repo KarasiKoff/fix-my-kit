@@ -13,10 +13,10 @@ from backend.app.schemas.admin_stats import (
     CatalogStats,
     CategoryDeviceCount,
     RepairRequestStats,
-    TrackerSyncEvent,
 )
 
 WONT_FIX_PATTERN = "не будет исправлено"
+RESOLVED_PATTERNS: tuple[str, ...] = ("Решен", "Решён")
 
 
 def _date_range_bounds(date_from: date | None, date_to: date | None) -> tuple[datetime | None, datetime | None]:
@@ -46,12 +46,20 @@ def _sync_in_range(start: datetime | None, end: datetime | None):
     return and_(*clauses)
 
 
-def _wont_fix_condition():
-    like = f"%{WONT_FIX_PATTERN}%"
+def _resolution_matches(pattern: str):
+    like = f"%{pattern}%"
     return or_(
         RepairRequest.resolution_note.ilike(like),
         RepairRequest.resolution_desc.ilike(like),
     )
+
+
+def _wont_fix_condition():
+    return _resolution_matches(WONT_FIX_PATTERN)
+
+
+def _resolved_condition():
+    return or_(*(_resolution_matches(pattern) for pattern in RESOLVED_PATTERNS))
 
 
 def build_admin_stats(db: Session, date_from: date | None, date_to: date | None) -> AdminStatsResponse:
@@ -83,7 +91,7 @@ def build_admin_stats(db: Session, date_from: date | None, date_to: date | None)
         wont_fix_q = wont_fix_q.filter(created_filter)
     wont_fix_count = int(wont_fix_q.scalar() or 0)
 
-    resolved_q = db.query(func.count(RepairRequest.id)).filter(closed_in_period, ~wont_fix)
+    resolved_q = db.query(func.count(RepairRequest.id)).filter(_resolved_condition())
     if created_filter is not None:
         resolved_q = resolved_q.filter(created_filter)
     resolved = int(resolved_q.scalar() or 0)
@@ -143,24 +151,6 @@ def build_admin_stats(db: Session, date_from: date | None, date_to: date | None)
     )
     last_tracker_sync_at = last_sync_row[0] if last_sync_row else None
 
-    recent_rows = (
-        db.query(RepairRequest)
-        .filter(RepairRequest.last_sync_at.isnot(None))
-        .order_by(RepairRequest.last_sync_at.desc())
-        .limit(8)
-        .all()
-    )
-    recent_tracker_syncs = [
-        TrackerSyncEvent(
-            repair_request_id=row.id,
-            tracker_ticket_key=row.tracker_ticket_key,
-            tracker_ticket_url=row.tracker_ticket_url,
-            last_sync_at=row.last_sync_at,
-        )
-        for row in recent_rows
-        if row.last_sync_at is not None
-    ]
-
     return AdminStatsResponse(
         date_from=date_from,
         date_to=date_to,
@@ -179,5 +169,4 @@ def build_admin_stats(db: Session, date_from: date | None, date_to: date | None)
         ),
         devices_by_category=devices_by_category,
         last_tracker_sync_at=last_tracker_sync_at,
-        recent_tracker_syncs=recent_tracker_syncs,
     )

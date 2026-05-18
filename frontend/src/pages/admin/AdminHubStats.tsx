@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { fetchAdminStats, type AdminStats } from '../../api/adminStats';
 import { syncAllUnsynchronizedRepairRequests } from '../../api/repairRequests';
 import {
@@ -272,41 +271,6 @@ export function AdminHubStats() {
                 </article>
             </div>
 
-            <section className="admin-stats-sync-history">
-                <h4 className="admin-stats-panel-title">Последние синхронизации с трекером</h4>
-                {loading ? (
-                    <p className="muted-text admin-stats-empty">Загрузка…</p>
-                ) : !stats?.recentTrackerSyncs.length ? (
-                    <div className="admin-stats-sync-empty">
-                        <span className="admin-stats-sync-empty-icon">
-                            <IconCalendar width={32} height={32} strokeWidth={1.5} />
-                        </span>
-                        <p className="muted-text">
-                            Синхронизации пока не выполнялись. Здесь будет отображаться история синхронизаций с
-                            трекером.
-                        </p>
-                    </div>
-                ) : (
-                    <ul className="admin-stats-sync-list">
-                        {stats.recentTrackerSyncs.map((row) => (
-                            <li key={`${row.repairRequestId}-${row.lastSyncAt}`}>
-                                <span className="admin-stats-sync-time">{formatDateTime(row.lastSyncAt)}</span>
-                                {row.trackerTicketKey ? (
-                                    row.trackerTicketUrl ? (
-                                        <a href={row.trackerTicketUrl} target="_blank" rel="noreferrer">
-                                            {row.trackerTicketKey}
-                                        </a>
-                                    ) : (
-                                        <span className="admin-stats-sync-key">{row.trackerTicketKey}</span>
-                                    )
-                                ) : (
-                                    <Link to={`/requests/${row.repairRequestId}`}>Заявка</Link>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </section>
         </section>
     );
 }
