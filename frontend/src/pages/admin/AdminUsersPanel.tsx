@@ -198,7 +198,15 @@ export function AdminUsersPanel() {
                         />
                     </label>
                     <div className="admin-toolbar-actions">
-                        <button type="button" className="btn-ghost btn-compact" disabled={loading} onClick={() => void load()}>
+                        <span className="admin-inline-label admin-toolbar-label-spacer" aria-hidden="true">
+                            {'\u00A0'}
+                        </span>
+                        <button
+                            type="button"
+                            className="btn-ghost admin-toolbar-btn"
+                            disabled={loading}
+                            onClick={() => void load()}
+                        >
                             Обновить список
                         </button>
                     </div>
@@ -305,7 +313,7 @@ export function AdminUsersPanel() {
                                             {new Date(u.createdAt).toLocaleString('ru-RU')}
                                         </td>
                                         <td className="table-col-center table-col-actions">
-                                            <div className="admin-row-actions">
+                                            <div className="admin-row-actions admin-row-actions--grid">
                                                 {editingId === u.id ? (
                                                     <>
                                                         <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
@@ -329,7 +337,12 @@ export function AdminUsersPanel() {
                                                         >
                                                             {u.isActive ? 'Отключить' : 'Включить'}
                                                         </button>
-                                                        <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => setResetUserId(u.id)}>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-ghost btn-compact admin-row-actions__full"
+                                                            disabled={!isAdmin}
+                                                            onClick={() => setResetUserId(u.id)}
+                                                        >
                                                             Сброс пароля
                                                         </button>
                                                     </>

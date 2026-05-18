@@ -92,7 +92,7 @@ export function RepairRequestForm({
                 Описание
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required />
             </label>
-            <button type="submit" disabled={devices.length === 0}>
+            <button type="submit" className="btn-primary" disabled={devices.length === 0}>
                 Отправить заявку
             </button>
         </form>
