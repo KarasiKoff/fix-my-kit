@@ -1,6 +1,7 @@
 """Входящие HTTP-вызовы из триггеров Yandex Tracker"""
 
 import hmac
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -26,6 +27,14 @@ from backend.app.services.repair_request_sysadmin_taken_service import (
     record_sysadmin_returned,
     record_sysadmin_taken,
 )
+from backend.app.services.tracker_service import (
+    TrackerUnavailableError,
+    SYSADMIN_RETURNED_TRACKER_COMMENT,
+    SYSADMIN_TAKEN_TRACKER_COMMENT,
+    post_issue_comment,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
@@ -134,6 +143,29 @@ def _find_repair_request(
     if issue_key:
         return q.filter(RepairRequest.tracker_ticket_key == issue_key).first()
     return q.filter(RepairRequest.tracker_ticket_id == issue_id).first()
+
+
+def _post_sysadmin_tracker_comment(
+    repair_request: RepairRequest, *, taken: bool
+) -> None:
+    """Ответный комментарий в задачу"""
+    issue_ref = (
+        repair_request.tracker_ticket_key or repair_request.tracker_ticket_id or ""
+    ).strip()
+    if not issue_ref:
+        return
+    text = (
+        SYSADMIN_TAKEN_TRACKER_COMMENT if taken else SYSADMIN_RETURNED_TRACKER_COMMENT
+    )
+    try:
+        post_issue_comment(issue_ref, text)
+    except TrackerUnavailableError as exc:
+        logger.warning(
+            "tracker_sysadmin_comment_failed issue_ref=%s taken=%s: %s",
+            issue_ref,
+            taken,
+            exc.message,
+        )
 
 
 def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
@@ -261,6 +293,7 @@ def yandex_tracker_close_repair_request(
     summary="Отметка «забрал / вернул сисадмин» из Yandex Tracker",
     description=(
         "Отдельный триггер по макросу."
+        "После успешной отметки в БД в задачу пишется комментарий от TRACKER_TOKEN"
     ),
 )
 def yandex_tracker_sysadmin_taken(
@@ -302,6 +335,7 @@ def yandex_tracker_sysadmin_taken(
         actor = _resolve_closed_by_user(db, payload.user, _webhook_fallback_user(db))
         record_sysadmin_taken(db, repair_request, actor)
         db.commit()
+        _post_sysadmin_tracker_comment(repair_request, taken=True)
         return YandexTrackerWebhookResponse(
             status="updated",
             repair_request_id=rid,
@@ -320,6 +354,7 @@ def yandex_tracker_sysadmin_taken(
         )
     record_sysadmin_returned(db, repair_request)
     db.commit()
+    _post_sysadmin_tracker_comment(repair_request, taken=False)
     return YandexTrackerWebhookResponse(
         status="updated",
         repair_request_id=rid,
