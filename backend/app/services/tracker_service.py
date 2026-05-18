@@ -206,7 +206,7 @@ def post_issue_comment(issue_ref: str, text: str, *, markup_md: bool = True) -> 
     base_url, token, org_id, _ = _require_tracker_config()
     safe_ref = quote(ref, safe="")
     url = f"{base_url}/issues/{safe_ref}/comments"
-    payload: dict = {"text": text.strip(), "isAddToFollowers": False}
+    payload: dict = {"text": text.strip()}
     if markup_md:
         payload["markupType"] = "md"
     _request_json("POST", url, token=token, org_id=org_id, data=payload)
