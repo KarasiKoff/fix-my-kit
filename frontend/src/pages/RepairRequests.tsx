@@ -9,6 +9,7 @@ import {
     type RepairRequestSuggestField,
 } from '../api/repairRequests';
 import { FilterCombobox } from '../components/FilterCombobox';
+import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { ListPagination } from '../components/ListPagination';
 import { SortableTh } from '../components/SortableTh';
 import { useAppData } from '../context/AppDataContext';
@@ -306,6 +307,7 @@ export function RepairRequests() {
                     </table>
                 </div>
             </section>
+            <ScrollToTopButton />
         </main>
     );
 }

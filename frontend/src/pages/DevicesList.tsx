@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchDevices, suggestDevices } from '../api/devices';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ScrollToTopButton } from '../components/ScrollToTopButton';
 import { FilterCombobox } from '../components/FilterCombobox';
 import { ListPagination } from '../components/ListPagination';
 import { QrSheetSettingsModal } from '../components/QrSheetSettingsModal';
@@ -435,6 +436,7 @@ export function DevicesList() {
                     }
                 }}
             />
+            <ScrollToTopButton />
         </main>
     );
 }
