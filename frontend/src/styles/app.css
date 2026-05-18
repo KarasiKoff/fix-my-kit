@@ -21,6 +21,8 @@
   --control-font: 1rem;
   --control-padding-y: 14px;
   --control-padding-x: 14px;
+  --control-min-height: calc(2 * var(--control-padding-y) + 1.4rem + 2px);
+  --admin-actions-col-width: 300px;
 }
 
 * {
@@ -586,6 +588,30 @@ td.table-col-start {
   margin: 0;
 }
 
+.admin-row-actions--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
+}
+
+.admin-row-actions--grid .btn-compact {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px !important;
+  font-size: 0.85rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.admin-row-actions--grid .admin-row-actions__full {
+  grid-column: 1 / -1;
+}
+
 .admin-table tbody tr.admin-table-row--editing td {
   vertical-align: middle;
   padding-block: 10px;
@@ -599,7 +625,7 @@ td.table-col-start {
   box-sizing: border-box;
 }
 
-.admin-table-row--editing .admin-row-actions {
+.admin-table-row--editing .admin-row-actions:not(.admin-row-actions--grid) {
   gap: 6px;
 }
 
@@ -608,14 +634,18 @@ td.table-col-start {
 }
 
 @media (max-width: 520px) {
-  .admin-row-actions {
+  .admin-row-actions:not(.admin-row-actions--grid) {
     gap: 6px;
   }
 
-  .admin-row-actions .btn-compact {
+  .admin-row-actions:not(.admin-row-actions--grid) .btn-compact {
     padding-inline: 10px !important;
     font-size: 0.82rem !important;
     min-height: 40px !important;
+  }
+
+  .admin-row-actions--grid {
+    width: 100%;
   }
 }
 
@@ -675,8 +705,27 @@ td.table-col-start {
 .admin-toolbar-actions {
   flex: 0 0 auto;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(100%, var(--admin-actions-col-width));
+}
+
+.admin-toolbar-label-spacer {
+  visibility: hidden;
+  user-select: none;
+  pointer-events: none;
+}
+
+.admin-toolbar-btn {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-min-height);
+  padding: var(--control-padding-y) var(--control-padding-x) !important;
+  font-size: var(--control-font) !important;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 @media (max-width: 520px) {
@@ -686,13 +735,13 @@ td.table-col-start {
   }
 
   .admin-toolbar-actions {
-    justify-content: center;
+    width: 100%;
+    max-width: var(--admin-actions-col-width);
+    margin-inline: auto;
   }
 
-  .admin-toolbar-actions .btn-compact {
+  .admin-toolbar-btn {
     width: 100%;
-    max-width: 280px;
-    margin-inline: auto;
   }
 }
 
@@ -766,8 +815,8 @@ td.table-col-start {
 }
 
 .admin-table .table-col-actions {
-  width: 300px;
-  min-width: 300px;
+  width: var(--admin-actions-col-width);
+  min-width: var(--admin-actions-col-width);
   vertical-align: middle;
 }
 
