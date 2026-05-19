@@ -17,6 +17,7 @@ const ROUTE_SUFFIXES: { pattern: string; suffix: string }[] = [
     { pattern: '/devices', suffix: 'Оборудование' },
     { pattern: '/users', suffix: 'Пользователи' },
     { pattern: '/repair', suffix: 'Заявка на ремонт' },
+    { pattern: '/privacy', suffix: 'Политика конфиденциальности' },
     { pattern: '/login', suffix: 'Вход' },
     { pattern: '/scan', suffix: 'QR-сканер' },
 ];

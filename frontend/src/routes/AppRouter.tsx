@@ -15,6 +15,7 @@ import { AdminAddRoom } from '../pages/admin/AdminAddRoom';
 import { AdminAddDevice } from '../pages/admin/AdminAddDevice';
 import { AdminChangePassword } from '../pages/admin/AdminChangePassword';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { PrivacyPage } from '../pages/PrivacyPage';
 import { DevicePublicPage } from '../pages/DevicePublicPage';
 import { useAuth } from '../hooks/useAuth';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -108,6 +109,7 @@ function AppShell() {
                 <Route path="/admin/add/user" element={<Navigate to="/admin/users" replace />} />
                 <Route path="/scan" element={<ErrorBoundary><QRScan /></ErrorBoundary>} />
                 <Route path="/device/:id/public" element={<DevicePublicPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="*" element={<NotFoundPage />} />
             </Routes>
             </div>
