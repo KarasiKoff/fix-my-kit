@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Device } from '../types/device';
 
 type FormData = {
@@ -111,9 +112,9 @@ export function RepairRequestForm({
                         />
                         <span>
                             Нажимая кнопку «Отправить заявку», я даю{' '}
-                            <a href="/privacy" target="_blank" rel="noopener noreferrer">
+                            <Link to="/privacy" target="_blank" rel="noopener noreferrer">
                                 согласие на обработку персональных данных
-                            </a>
+                            </Link>
                         </span>
                     </label>
                 ) : null}
