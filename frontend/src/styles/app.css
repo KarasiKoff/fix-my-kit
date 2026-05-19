@@ -2647,6 +2647,19 @@ tbody tr:hover {
   width: 16px;
   height: 16px;
   accent-color: var(--accent);
+  outline: none;
+  box-shadow: none;
+}
+
+.repair-request-form .repair-consent-field input[type='checkbox']:focus,
+.repair-request-form .repair-consent-field input[type='checkbox']:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.repair-request-form .repair-consent-field:focus-within {
+  outline: none;
+  box-shadow: none;
 }
 
 .repair-request-form .repair-consent-field a {
