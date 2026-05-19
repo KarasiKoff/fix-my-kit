@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
 import { createAudience, deleteAudience, fetchAudiences, updateAudience, type AudienceDto } from '../../api/audiences';
+import { ScrollToTopButton } from '../../components/ScrollToTopButton';
 import { formatApiError } from '../../utils/formatApiError';
 
 export function AdminAddRoom() {
@@ -181,6 +182,7 @@ export function AdminAddRoom() {
                     </table>
                 </div>
             </section>
+            <ScrollToTopButton />
         </main>
     );
 }
