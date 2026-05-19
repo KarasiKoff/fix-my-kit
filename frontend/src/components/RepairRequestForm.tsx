@@ -23,6 +23,7 @@ export function RepairRequestForm({
     const [deviceId, setDeviceId] = useState(initialDeviceId ?? devices[0]?.id ?? '');
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [personalDataConsent, setPersonalDataConsent] = useState(false);
 
     useEffect(() => {
         if (initialDeviceId) {
@@ -49,7 +50,7 @@ export function RepairRequestForm({
                 if (!deviceId) {
                     return;
                 }
-                if (nameRequired && !name.trim()) {
+                if (nameRequired && (!name.trim() || !personalDataConsent)) {
                     return;
                 }
                 try {
@@ -57,6 +58,7 @@ export function RepairRequestForm({
                     setDescription('');
                     if (nameRequired) {
                         setName('');
+                        setPersonalDataConsent(false);
                     }
                 } catch {
                     /* ошибку показывает родитель */
@@ -92,9 +94,30 @@ export function RepairRequestForm({
                 Описание
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required />
             </label>
-            <button type="submit" className="btn-primary" disabled={devices.length === 0}>
-                Отправить заявку
-            </button>
+            <div className="repair-request-form-actions">
+                <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={devices.length === 0 || (nameRequired && !personalDataConsent)}
+                >
+                    Отправить заявку
+                </button>
+                {nameRequired ? (
+                    <label className="repair-consent-field">
+                        <input
+                            type="checkbox"
+                            checked={personalDataConsent}
+                            onChange={(e) => setPersonalDataConsent(e.target.checked)}
+                        />
+                        <span>
+                            Нажимая кнопку «Отправить заявку», я даю{' '}
+                            <a href="/privacy" target="_blank" rel="noopener noreferrer">
+                                согласие на обработку персональных данных
+                            </a>
+                        </span>
+                    </label>
+                ) : null}
+            </div>
         </form>
     );
 }
