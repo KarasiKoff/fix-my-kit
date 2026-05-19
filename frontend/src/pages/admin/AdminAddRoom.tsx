@@ -166,6 +166,9 @@ export function AdminAddRoom() {
                                                 </>
                                             ) : (
                                                 <>
+                                                    <Link to={`/admin/room/${row.id}/map`} className="btn-ghost btn-compact">
+                                                        Карта
+                                                    </Link>
                                                     <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(row)}>
                                                         Изменить
                                                     </button>

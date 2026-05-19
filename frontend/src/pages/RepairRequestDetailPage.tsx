@@ -22,6 +22,7 @@ import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 import { formatApiError } from '../utils/formatApiError';
 import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
 import { fetchUserListItemById } from '../api/users';
+import { RoomMapModal } from '../components/RoomMapModal';
 
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
     if (s === 'new') {
@@ -39,6 +40,7 @@ export function RepairRequestDetailPage() {
     const [loading, setLoading] = useState(true);
     const [closeNote, setCloseNote] = useState('');
     const [closedByDbLabel, setClosedByDbLabel] = useState<string | null>(null);
+    const [showMapModal, setShowMapModal] = useState(false);
 
     const reload = useCallback(async () => {
         if (!id) {
@@ -300,6 +302,16 @@ export function RepairRequestDetailPage() {
                             ) : (
                                 request.deviceId
                             )}
+                            {device?.audienceId != null ? (
+                                <button
+                                    type="button"
+                                    className="btn-ghost btn-compact"
+                                    style={{ marginLeft: 10 }}
+                                    onClick={() => setShowMapModal(true)}
+                                >
+                                    Показать на карте
+                                </button>
+                            ) : null}
                         </span>
                     </li>
                     <li>
@@ -391,6 +403,15 @@ export function RepairRequestDetailPage() {
                         </div>
                     </div>
                 </section>
+            ) : null}
+
+            {showMapModal && device?.audienceId != null ? (
+                <RoomMapModal
+                    audienceId={device.audienceId}
+                    audienceName={device.room}
+                    highlightedDeviceId={device.id}
+                    onClose={() => setShowMapModal(false)}
+                />
             ) : null}
         </main>
     );

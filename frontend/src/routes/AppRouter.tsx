@@ -14,6 +14,7 @@ import { AdminAddCategory } from '../pages/admin/AdminAddCategory';
 import { AdminAddRoom } from '../pages/admin/AdminAddRoom';
 import { AdminAddDevice } from '../pages/admin/AdminAddDevice';
 import { AdminChangePassword } from '../pages/admin/AdminChangePassword';
+import { RoomMapEditor } from '../pages/admin/RoomMapEditor';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { PrivacyPage } from '../pages/PrivacyPage';
 import { DevicePublicPage } from '../pages/DevicePublicPage';
@@ -106,6 +107,7 @@ function AppShell() {
                 <Route path="/admin/add/room" element={<RequireAuth><AdminAddRoom /></RequireAuth>} />
                 <Route path="/admin/add/device" element={<RequireAuth><AdminAddDevice /></RequireAuth>} />
                 <Route path="/admin/password" element={<RequireAuth><AdminChangePassword /></RequireAuth>} />
+                <Route path="/admin/room/:id/map" element={<RequireAuth><RoomMapEditor /></RequireAuth>} />
                 <Route path="/admin/add/user" element={<Navigate to="/admin/users" replace />} />
                 <Route path="/scan" element={<ErrorBoundary><QRScan /></ErrorBoundary>} />
                 <Route path="/device/:id/public" element={<DevicePublicPage />} />

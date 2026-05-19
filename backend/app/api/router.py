@@ -10,6 +10,7 @@ from backend.app.api.routes.repair_requests import router as repair_requests_rou
 from backend.app.api.routes.public import router as public_router
 from backend.app.api.routes.users import router as users_router
 
+from backend.app.api.routes.room_map import router as room_map_router
 from backend.app.api.routes.webhooks import router as webhooks_router
 
 api_router = APIRouter()
@@ -23,3 +24,4 @@ api_router.include_router(webhooks_router)
 api_router.include_router(repair_requests_router)
 api_router.include_router(users_router)
 api_router.include_router(public_router)
+api_router.include_router(room_map_router)
