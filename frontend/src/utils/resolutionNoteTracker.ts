@@ -1,8 +1,8 @@
-/** Совпадает с суффиксом вебхука Трекера в `resolution_note` (символ FF + маркер). */
+/** Совпадает с суффиксом вебхука Tracker в `resolution_note` (символ FF + маркер). */
 const TRACKER_CLOSED_BY_MARKER = '\fTRACKER_CLOSED_BY:';
 
 /**
- * Из одного поля API `resolution_note` выделяет текст резолюции и строку «кто закрыл» из Трекера.
+ * Из одного поля API `resolution_note` выделяет текст резолюции и строку «кто закрыл» из Tracker.
  */
 export function splitResolutionNoteFromApi(raw: string | null | undefined): {
     resolutionBody: string;

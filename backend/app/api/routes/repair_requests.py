@@ -95,7 +95,7 @@ def ensure_no_active_request(db: Session, device_id: UUID) -> None:
 
 
 def _try_tracker_sync(db: Session, request_id: UUID) -> bool:
-    """Пытается создать/подтянуть задачу в Трекере и догрузить вложения."""
+    """Пытается создать/подтянуть задачу в Tracker и догрузить вложения."""
     repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
     return sync_tracker_issue_and_attachments(db, repair_request)
 
@@ -229,7 +229,7 @@ def sync_unsynchronized_repair_requests(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin_or_sysadmin),
 ) -> TrackerBulkSyncResponse:
-    """Синхронизирует с Трекером все заявки без ticket id и key."""
+    """Синхронизирует с Tracker все заявки без ticket id и key."""
     rows = (
         db.query(RepairRequest.id)
         .filter(

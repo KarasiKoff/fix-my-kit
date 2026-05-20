@@ -62,7 +62,7 @@ class ServerConfig(BaseSettings):
     upload_dir: str = Field(
         default="data/uploads",
         alias="UPLOAD_DIR",
-        description="Каталог временных вложений заявок (pending) до загрузки в Трекер.",
+        description="Каталог временных вложений заявок (pending) до загрузки в Tracker.",
     )
     attachment_max_bytes: int = Field(
         default=1024 * 1024 * 1024,

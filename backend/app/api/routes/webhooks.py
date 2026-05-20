@@ -156,7 +156,7 @@ def _post_tracker_comment(
     *,
     log_event: str,
 ) -> None:
-    """Комментарий в задачу (TRACKER_TOKEN). Ошибка Трекера не ломает вебхук."""
+    """Комментарий в задачу (TRACKER_TOKEN). Ошибка Tracker не ломает вебхук."""
     issue_ref = (
         repair_request.tracker_ticket_key or repair_request.tracker_ticket_id or ""
     ).strip()

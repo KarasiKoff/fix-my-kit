@@ -1,4 +1,4 @@
-"""Вложения заявок: диск → Трекер, статусы, очистка."""
+"""Вложения заявок: диск - Tracker, статусы, очистка."""
 
 from __future__ import annotations
 
@@ -125,7 +125,7 @@ async def validate_and_store_uploads(
 def sync_pending_attachments_to_tracker(
     repair_request: RepairRequest,
 ) -> tuple[int, int]:
-    """Загружает pending-файлы в Трекер. Возвращает (успешно, ошибок)."""
+    """Загружает pending-файлы в Tracker. Возвращает (успешно, ошибок)."""
     ref = issue_ref_for(repair_request)
     if not ref:
         return 0, count_pending(repair_request.id)

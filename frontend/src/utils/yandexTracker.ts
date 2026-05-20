@@ -1,7 +1,7 @@
 const YANDEX_TRACKER_WEB = 'https://tracker.yandex.ru';
 
 /**
- * Ссылка на тикет в веб-интерфейсе Яндекс Трекера (не URL из поля self API).
+ * Ссылка на тикет в веб-интерфейсе Яндекс Tracker (не URL из поля self API).
  */
 export function yandexTrackerIssueWebHref(ticketKey?: string | null, ticketUrl?: string | null): string | undefined {
     const key = ticketKey?.trim();

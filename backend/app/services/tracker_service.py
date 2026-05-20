@@ -14,7 +14,7 @@ from backend.app.models.repair_request import RepairRequest
 
 
 class TrackerUnavailableError(Exception):
-    """Ошибка сети, HTTP или неожиданный ответ Трекера."""
+    """Ошибка сети, HTTP или неожиданный ответ Tracker."""
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
@@ -67,7 +67,7 @@ def _tracker_headers(
 def _parse_issue_response(body: dict) -> TrackerIssueResult:
     ticket_id = str(body.get("id") or "")
     ticket_key = str(body.get("key") or "")
-    # В ответе API поле self — URL вида api.tracker.yandex.net/.../issues/KEY; для UI нужна ссылка на веб-Трекер.
+    # В ответе API поле self - URL вида api.tracker.yandex.net/.../issues/KEY; для UI нужна ссылка на веб-Tracker.
     if ticket_key:
         ticket_url = f"https://tracker.yandex.ru/{ticket_key}"
     else:
@@ -327,7 +327,7 @@ def _create_issue(repair_request: RepairRequest) -> TrackerIssueResult:
 
 
 def sync_repair_request_to_tracker(repair_request: RepairRequest) -> TrackerIssueResult:
-    """Создаёт задачу в Трекере или подтверждает существующую по ключу/id в БД."""
+    """Создаёт задачу в Tracker или подтверждает существующую по ключу/id в БД."""
     base_url, token, org_id, _queue = _require_tracker_config()
     issue_ref = repair_request.tracker_ticket_key or repair_request.tracker_ticket_id
     if issue_ref:
