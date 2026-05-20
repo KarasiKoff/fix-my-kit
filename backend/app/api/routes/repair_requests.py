@@ -360,6 +360,7 @@ def publish_repair_request(
     repair_request.is_published = payload.is_published
     db.commit()
     db.refresh(repair_request)
+    notify_repair_request_updated(repair_request, source="api")
     return RepairRequestDetail.model_validate(repair_request)
 
 
