@@ -10,6 +10,11 @@ from backend.app.models.base import Base
 from backend.app.models.enums import AttachmentsSyncStatus, RequestStatus
 
 
+def _pg_enum_values(enum_cls: type) -> list[str]:
+    """Значения enum для PostgreSQL (нижний регистр), не имена членов (NONE)."""
+    return [member.value for member in enum_cls]
+
+
 class RepairRequest(Base):
     __tablename__ = "repair_requests"
 
@@ -32,7 +37,11 @@ class RepairRequest(Base):
     is_published = Column(Boolean, nullable=False, default=False, server_default="false")
     has_attachments = Column(Boolean, nullable=False, default=False, server_default="false")
     attachments_sync_status = Column(
-        SQLEnum(AttachmentsSyncStatus, name="attachments_sync_status"),
+        SQLEnum(
+            AttachmentsSyncStatus,
+            name="attachments_sync_status",
+            values_callable=_pg_enum_values,
+        ),
         nullable=False,
         default=AttachmentsSyncStatus.NONE,
         server_default="none",
