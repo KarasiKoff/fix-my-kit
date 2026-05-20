@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
+from uuid import uuid4
 from urllib import error, request
 from urllib.parse import quote
 
@@ -24,6 +27,17 @@ class TrackerIssueResult:
     ticket_key: str
     ticket_url: str
     synced_at: datetime
+
+
+@dataclass(frozen=True)
+class TrackerAttachmentMeta:
+    id: str
+    name: str
+    mimetype: str | None
+    size: int | None
+    thumbnail_url: str | None
+    content_url: str | None
+    created_at: str | None
 
 
 def _require_tracker_config() -> tuple[str, str, str, str]:
@@ -94,6 +108,136 @@ def _request_json(
         raise TrackerUnavailableError(f"tracker_network: {exc.reason}") from exc
     except json.JSONDecodeError as exc:
         raise TrackerUnavailableError("tracker_invalid_json") from exc
+
+
+def _request_bytes(
+    method: str,
+    url: str,
+    *,
+    token: str,
+    org_id: str,
+    data: bytes | None = None,
+    headers_extra: dict[str, str] | None = None,
+) -> tuple[bytes, str | None]:
+    headers = _tracker_headers(token, org_id, json_body=False)
+    if headers_extra:
+        headers.update(headers_extra)
+    req = request.Request(url, data=data, method=method, headers=headers)
+    timeout = settings.server.tracker_timeout_seconds
+    try:
+        with request.urlopen(req, timeout=timeout) as resp:
+            content_type = resp.headers.get("Content-Type")
+            return resp.read(), content_type
+    except error.HTTPError as exc:
+        text = exc.read().decode("utf-8", errors="replace")
+        raise TrackerUnavailableError(f"tracker_http_{exc.code}: {text}") from exc
+    except error.URLError as exc:
+        raise TrackerUnavailableError(f"tracker_network: {exc.reason}") from exc
+
+
+def _request_json_list(
+    method: str,
+    url: str,
+    *,
+    token: str,
+    org_id: str,
+) -> list:
+    raw, _ = _request_bytes(method, url, token=token, org_id=org_id)
+    try:
+        body = json.loads(raw.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise TrackerUnavailableError("tracker_invalid_json") from exc
+    if not isinstance(body, list):
+        raise TrackerUnavailableError("tracker_expected_list")
+    return body
+
+
+def _parse_attachment(item: dict) -> TrackerAttachmentMeta:
+    return TrackerAttachmentMeta(
+        id=str(item.get("id") or ""),
+        name=str(item.get("name") or "file"),
+        mimetype=(str(item["mimetype"]) if item.get("mimetype") else None),
+        size=int(item["size"]) if item.get("size") is not None else None,
+        thumbnail_url=str(item["thumbnail"]) if item.get("thumbnail") else None,
+        content_url=str(item["content"]) if item.get("content") else None,
+        created_at=str(item["createdAt"]) if item.get("createdAt") else None,
+    )
+
+
+def issue_ref_for(repair_request: RepairRequest) -> str | None:
+    ref = (repair_request.tracker_ticket_key or repair_request.tracker_ticket_id or "").strip()
+    return ref or None
+
+
+def list_issue_attachments(repair_request: RepairRequest) -> list[TrackerAttachmentMeta]:
+    ref = issue_ref_for(repair_request)
+    if not ref:
+        return []
+    base_url, token, org_id, _ = _require_tracker_config()
+    safe_ref = quote(ref, safe="")
+    url = f"{base_url}/issues/{safe_ref}/attachments"
+    items = _request_json_list("GET", url, token=token, org_id=org_id)
+    return [_parse_attachment(row) for row in items if isinstance(row, dict) and row.get("id")]
+
+
+def upload_issue_attachment(
+    issue_ref: str,
+    *,
+    file_path: Path,
+    filename: str,
+) -> TrackerAttachmentMeta:
+    base_url, token, org_id, _ = _require_tracker_config()
+    safe_ref = quote(issue_ref.strip(), safe="")
+    url = f"{base_url}/issues/{safe_ref}/attachments/"
+    body_bytes = file_path.read_bytes()
+    mime = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    boundary = f"----FixMyKit{uuid4().hex}"
+    disposition = f'form-data; name="file"; filename="{filename}"'
+    parts: list[bytes] = [
+        f"--{boundary}\r\n".encode(),
+        f"Content-Disposition: {disposition}\r\n".encode(),
+        f"Content-Type: {mime}\r\n\r\n".encode(),
+        body_bytes,
+        f"\r\n--{boundary}--\r\n".encode(),
+    ]
+    payload = b"".join(parts)
+    raw, _ = _request_bytes(
+        "POST",
+        url,
+        token=token,
+        org_id=org_id,
+        data=payload,
+        headers_extra={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+    try:
+        body = json.loads(raw.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise TrackerUnavailableError("tracker_invalid_json") from exc
+    if not isinstance(body, dict):
+        raise TrackerUnavailableError("tracker_attachment_response_invalid")
+    return _parse_attachment(body)
+
+
+def fetch_attachment_content(
+    repair_request: RepairRequest,
+    attachment_id: str,
+    *,
+    variant: str = "content",
+) -> tuple[bytes, str | None]:
+    ref = issue_ref_for(repair_request)
+    if not ref:
+        raise TrackerUnavailableError("tracker_issue_ref_missing")
+    attachments = list_issue_attachments(repair_request)
+    match = next((a for a in attachments if a.id == attachment_id), None)
+    if match is None:
+        raise TrackerUnavailableError("tracker_attachment_not_found")
+    url = match.thumbnail_url if variant == "thumbnail" else match.content_url
+    if not url:
+        raise TrackerUnavailableError("tracker_attachment_url_missing")
+    base_url, token, org_id, _ = _require_tracker_config()
+    if url.startswith("/"):
+        url = f"{base_url.rstrip('/')}/{url.lstrip('/')}"
+    return _request_bytes("GET", url, token=token, org_id=org_id)
 
 
 def _requester_line(repair_request: RepairRequest) -> str:

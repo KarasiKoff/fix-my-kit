@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from backend.app.api.routes.admin_maintenance import router as admin_maintenance_router
 from backend.app.api.routes.admin_stats import router as admin_stats_router
 from backend.app.api.routes.auth import router as auth_router
 from backend.app.api.routes.devices import router as devices_router
@@ -15,6 +16,7 @@ from backend.app.api.routes.events import router as events_router
 
 api_router = APIRouter()
 api_router.include_router(admin_stats_router)
+api_router.include_router(admin_maintenance_router)
 api_router.include_router(auth_router)
 api_router.include_router(devices_router)
 api_router.include_router(categories_router)

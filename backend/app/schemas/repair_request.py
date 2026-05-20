@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from backend.app.models.enums import RequestStatus
+from backend.app.models.enums import AttachmentsSyncStatus, RequestStatus
 
 
 class RepairRequestBase(BaseModel):
@@ -66,6 +66,10 @@ class RepairRequestResponse(RepairRequestBase):
     tracker_ticket_key: str | None = None
     tracker_ticket_url: str | None = None
     last_sync_at: datetime | None = None
+    has_attachments: bool = False
+    attachments_sync_status: AttachmentsSyncStatus = AttachmentsSyncStatus.NONE
+    attachments_count: int = 0
+    attachments_synced_count: int = 0
     created_at: datetime
     updated_at: datetime
     device_inventory_number: str | None = None

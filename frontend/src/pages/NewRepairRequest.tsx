@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AttachmentUploader, draftsToFiles, type AttachmentDraft } from '../components/AttachmentUploader';
 import { RepairRequestForm } from '../components/RepairRequestForm';
 import { useAppData } from '../context/AppDataContext';
 import { useAuth } from '../hooks/useAuth';
@@ -22,6 +23,7 @@ export function NewRepairRequest() {
     const [publicError, setPublicError] = useState<string | null>(null);
     const [guestDone, setGuestDone] = useState(false);
     const [sendToTracker, setSendToTracker] = useState(true);
+    const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
 
     useEffect(() => {
         if (isAuthenticated || !preselectedDeviceId) {
@@ -95,6 +97,7 @@ export function NewRepairRequest() {
     }, [devices, displayDevices, isAuthenticated, selectedCategory, selectedRoom]);
 
     async function handleSubmit(data: { deviceId: string; name: string; description: string }) {
+        const files = draftsToFiles(attachmentDrafts);
         try {
             if (isAuthenticated) {
                 await createRepairRequest({
@@ -102,15 +105,19 @@ export function NewRepairRequest() {
                     requesterName: user?.name ?? user?.login ?? '',
                     description: data.description,
                     syncToTracker: sendToTracker,
+                    files,
                 });
                 showSuccess('Заявка отправлена');
+                setAttachmentDrafts([]);
             } else {
                 await submitRepairRequest({
                     deviceId: data.deviceId,
                     requesterName: data.name,
                     description: data.description,
+                    files,
                 });
                 showSuccess('Заявка отправлена');
+                setAttachmentDrafts([]);
                 setGuestDone(true);
             }
         } catch (err) {
@@ -206,6 +213,8 @@ export function NewRepairRequest() {
                         <span>Отправить заявку в Яндекс Трекер</span>
                     </label>
                 ) : null}
+
+                <AttachmentUploader files={attachmentDrafts} onChange={setAttachmentDrafts} />
 
                 <RepairRequestForm
                     devices={filteredDevices}

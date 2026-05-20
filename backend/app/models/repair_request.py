@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import relationship
 
 from backend.app.models.base import Base
-from backend.app.models.enums import RequestStatus
+from backend.app.models.enums import AttachmentsSyncStatus, RequestStatus
 
 
 class RepairRequest(Base):
@@ -30,6 +30,15 @@ class RepairRequest(Base):
     tracker_ticket_url = Column(String, nullable=True)
     last_sync_at = Column(TIMESTAMP(timezone=True), nullable=True)
     is_published = Column(Boolean, nullable=False, default=False, server_default="false")
+    has_attachments = Column(Boolean, nullable=False, default=False, server_default="false")
+    attachments_sync_status = Column(
+        SQLEnum(AttachmentsSyncStatus, name="attachments_sync_status"),
+        nullable=False,
+        default=AttachmentsSyncStatus.NONE,
+        server_default="none",
+    )
+    attachments_count = Column(nullable=False, default=0, server_default="0")
+    attachments_synced_count = Column(nullable=False, default=0, server_default="0")
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
         TIMESTAMP(timezone=True),

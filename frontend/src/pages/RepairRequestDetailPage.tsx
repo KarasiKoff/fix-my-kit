@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchDeviceById } from '../api/devices';
+import { addRepairRequestAttachments } from '../api/repairRequestAttachments';
 import {
     fetchRepairRequest,
     isRepairRequestSynced,
@@ -10,6 +11,8 @@ import {
     publishRepairRequest,
     syncRepairRequestTracker,
 } from '../api/repairRequests';
+import { AttachmentUploader, draftsToFiles, type AttachmentDraft } from '../components/AttachmentUploader';
+import { RepairAttachmentsModal } from '../components/RepairAttachmentsModal';
 import { Device } from '../types/device';
 import { RepairRequestDetail } from '../types/repairRequest';
 import { useToast } from '../context/ToastContext';
@@ -23,6 +26,7 @@ import { formatApiError } from '../utils/formatApiError';
 import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
 import { fetchUserListItemById } from '../api/users';
 import { useRepairRequestSse } from '../hooks/useRepairRequestSse';
+import { MAX_ATTACHMENTS_PER_REQUEST } from '../utils/attachmentLimits';
 
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
     if (s === 'new') {
@@ -40,6 +44,9 @@ export function RepairRequestDetailPage() {
     const [loading, setLoading] = useState(true);
     const [closeNote, setCloseNote] = useState('');
     const [closedByDbLabel, setClosedByDbLabel] = useState<string | null>(null);
+    const [addDrafts, setAddDrafts] = useState<AttachmentDraft[]>([]);
+    const [addingFiles, setAddingFiles] = useState(false);
+    const [attachmentsOpen, setAttachmentsOpen] = useState(false);
 
     const reload = useCallback(
         async (opts?: { silent?: boolean }) => {
@@ -139,6 +146,23 @@ export function RepairRequestDetailPage() {
             await reload();
         } catch (err) {
             showError(formatApiError(err));
+        }
+    }
+
+    async function handleAddAttachments() {
+        if (!id || addDrafts.length === 0) {
+            return;
+        }
+        setAddingFiles(true);
+        try {
+            await addRepairRequestAttachments(id, draftsToFiles(addDrafts));
+            setAddDrafts([]);
+            showSuccess('Файлы добавлены');
+            await reload();
+        } catch (err) {
+            showError(formatApiError(err));
+        } finally {
+            setAddingFiles(false);
         }
     }
 
@@ -345,6 +369,55 @@ export function RepairRequestDetailPage() {
                         <p className="request-description-block">{request.description}</p>
                     </li>
                 </ul>
+
+                <section className="repair-detail-attachments card-inset">
+                    <h3 className="repair-detail-attachments__title">Вложения</h3>
+                    {request.hasAttachments ? (
+                        <p className="repair-detail-attachments__meta">
+                            Файлов: {request.attachmentsCount ?? 0}
+                            {request.attachmentsSyncStatus === 'complete'
+                                ? ' · все в Трекере'
+                                : request.attachmentsSyncStatus === 'partial'
+                                  ? ' · часть ещё загружается в Трекер'
+                                  : ' · ожидают загрузки в Трекер'}
+                        </p>
+                    ) : (
+                        <p className="repair-detail-attachments__meta">Файлы не прикреплялись.</p>
+                    )}
+                    {isRepairRequestSynced(request) ? (
+                        <button type="button" className="btn-ghost btn-compact" onClick={() => setAttachmentsOpen(true)}>
+                            Просмотреть вложения в Трекере
+                        </button>
+                    ) : request.hasAttachments ? (
+                        <p className="repair-detail-attachments__hint">
+                            Просмотр доступен после синхронизации с Трекером.
+                        </p>
+                    ) : null}
+                    {(request.attachmentsCount ?? 0) < MAX_ATTACHMENTS_PER_REQUEST ? (
+                        <>
+                            <AttachmentUploader
+                                files={addDrafts}
+                                onChange={setAddDrafts}
+                                maxFiles={MAX_ATTACHMENTS_PER_REQUEST - (request.attachmentsCount ?? 0)}
+                                disabled={addingFiles}
+                                label="Добавить файлы"
+                            />
+                            {addDrafts.length > 0 ? (
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    disabled={addingFiles}
+                                    onClick={() => void handleAddAttachments()}
+                                >
+                                    {addingFiles ? 'Загрузка…' : 'Загрузить выбранные'}
+                                </button>
+                            ) : null}
+                        </>
+                    ) : (
+                        <p className="repair-detail-attachments__hint">Достигнут лимит 10 файлов на заявку.</p>
+                    )}
+                </section>
+
                 <div className="repair-detail-tracker-actions">
                     <div className="repair-detail-tracker-footer repair-detail-tracker-footer--stacked">
                         {trackerHref ? (
@@ -411,6 +484,14 @@ export function RepairRequestDetailPage() {
                         </div>
                     </div>
                 </section>
+            ) : null}
+
+            {id ? (
+                <RepairAttachmentsModal
+                    requestId={id}
+                    open={attachmentsOpen}
+                    onClose={() => setAttachmentsOpen(false)}
+                />
             ) : null}
         </main>
     );

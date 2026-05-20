@@ -13,6 +13,19 @@ export type RepairRequest = {
     lastSyncedAt?: string;
     deviceInventoryNumber?: string;
     deviceName?: string;
+    hasAttachments?: boolean;
+    attachmentsSyncStatus?: 'none' | 'partial' | 'complete';
+    attachmentsCount?: number;
+};
+
+export type TrackerAttachment = {
+    id: string;
+    name: string;
+    kind: 'image' | 'video';
+    mimetype?: string | null;
+    size?: number | null;
+    hasThumbnail: boolean;
+    createdAt?: string | null;
 };
 
 export type RepairRequestDetail = RepairRequest & {

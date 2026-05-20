@@ -15,3 +15,9 @@ class RequestStatus(str, Enum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     CLOSED = "closed"
+
+
+class AttachmentsSyncStatus(str, Enum):
+    NONE = "none"
+    PARTIAL = "partial"
+    COMPLETE = "complete"
