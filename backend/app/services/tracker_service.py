@@ -208,6 +208,12 @@ SYSADMIN_TAKEN_TRACKER_COMMENT = yfm_red(
 SYSADMIN_RETURNED_TRACKER_COMMENT = yfm_red(
     "В Fix My Kit снята пометка «забрал сисадмин» — устройство на месте."
 )
+PUBLISH_TRACKER_COMMENT = yfm_red(
+    "В Fix My Kit заявка **опубликована** для гостей (видна по QR на устройстве)."
+)
+UNPUBLISH_TRACKER_COMMENT = yfm_red(
+    "В Fix My Kit публикация заявки **снята** — для гостей не отображается."
+)
 
 
 def post_issue_comment(issue_ref: str, text: str, *, markup_md: bool = True) -> None:

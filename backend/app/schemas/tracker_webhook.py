@@ -91,6 +91,38 @@ class YandexTrackerSysadminTakenPayload(BaseModel):
         return self
 
 
+class YandexTrackerPublishPayload(BaseModel):
+    """Тело POST из триггера Yandex Tracker по макросу «опубликовать / снять с публикации»."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    issue_key: str | None = Field(default=None)
+    issue_id: str | None = Field(default=None)
+    is_published: bool = Field(
+        description="true — опубликовать для гостей, false — снять с публикации",
+    )
+    user: str | None = Field(
+        default=None,
+        description="Логин из {{currentUser.login}}",
+    )
+
+    @field_validator("issue_id", mode="before")
+    @classmethod
+    def issue_id_as_str(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s or None
+
+    @model_validator(mode="after")
+    def require_issue_ref(self) -> "YandexTrackerPublishPayload":
+        key = (self.issue_key or "").strip()
+        iid = (self.issue_id or "").strip()
+        if not key and not iid:
+            raise ValueError("issue_key or issue_id is required")
+        return self
+
+
 class YandexTrackerWebhookResponse(BaseModel):
     status: str
     repair_request_id: str | None = None
@@ -105,4 +137,8 @@ class YandexTrackerWebhookResponse(BaseModel):
     taken_by_sysadmin: bool | None = Field(
         default=None,
         description="Отметка «забрал сисадмин» после обработки (эндпоинт sysadmin-taken)",
+    )
+    is_published: bool | None = Field(
+        default=None,
+        description="Видимость заявки для гостей после обработки",
     )
