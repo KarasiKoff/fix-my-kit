@@ -23,6 +23,7 @@ from backend.app.services.repair_history_service import add_repair_history
 from backend.app.services.repair_request_closure_service import (
     record_repair_request_closed,
 )
+from backend.app.services.realtime_notify import notify_repair_request_updated
 from backend.app.services.repair_request_sysadmin_taken_service import (
     record_sysadmin_returned,
     record_sysadmin_taken,
@@ -254,6 +255,7 @@ def yandex_tracker_close_repair_request(
             payload.resolution_desc,
         )
         db.commit()
+        notify_repair_request_updated(repair_request, source="tracker_webhook")
         _post_tracker_comment(
             repair_request,
             tracker_comment_status_sync(raw_status),
@@ -284,6 +286,7 @@ def yandex_tracker_close_repair_request(
         note=f"Статус из Трекера: {raw_status}",
     )
     db.commit()
+    notify_repair_request_updated(repair_request, source="tracker_webhook")
     _post_tracker_comment(
         repair_request,
         tracker_comment_status_sync(raw_status),
@@ -347,6 +350,7 @@ def yandex_tracker_sysadmin_taken(
         actor = _resolve_closed_by_user(db, payload.user, _webhook_fallback_user(db))
         record_sysadmin_taken(db, repair_request, actor)
         db.commit()
+        notify_repair_request_updated(repair_request, source="tracker_webhook_sysadmin")
         _post_tracker_comment(
             repair_request, SYSADMIN_TAKEN_TRACKER_COMMENT, log_event="sysadmin_taken"
         )
@@ -368,6 +372,7 @@ def yandex_tracker_sysadmin_taken(
         )
     record_sysadmin_returned(db, repair_request)
     db.commit()
+    notify_repair_request_updated(repair_request, source="tracker_webhook_sysadmin")
     _post_tracker_comment(
         repair_request, SYSADMIN_RETURNED_TRACKER_COMMENT, log_event="sysadmin_returned"
     )

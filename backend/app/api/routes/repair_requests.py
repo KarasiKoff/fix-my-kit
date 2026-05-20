@@ -26,6 +26,7 @@ from backend.app.schemas.repair_request import (
 from backend.app.schemas.suggest import SuggestResponse
 from backend.app.schemas.tracker import TrackerBulkSyncResponse, TrackerSyncResponse
 from backend.app.services.repair_history_service import add_repair_history
+from backend.app.services.realtime_notify import notify_repair_request_updated
 from backend.app.services.repair_request_closure_service import record_repair_request_closed
 from backend.app.services.repair_request_list_query import fetch_repair_requests_page, suggest_repair_requests
 from backend.app.services.tracker_service import TrackerUnavailableError, sync_repair_request_to_tracker
@@ -215,6 +216,7 @@ def create_repair_request(
     _record_request_created(db, repair_request)
     db.commit()
     db.refresh(repair_request)
+    notify_repair_request_updated(repair_request, source="api")
 
     if payload.sync_to_tracker:
         _try_tracker_sync(db, repair_request.id)
@@ -243,6 +245,7 @@ def create_public_repair_request(
 
     _try_tracker_sync(db, repair_request.id)
     db.refresh(repair_request)
+    notify_repair_request_updated(repair_request, source="public_api")
     return PublicRepairRequestResponse(id=repair_request.id, status=repair_request.status)
 
 
@@ -292,6 +295,7 @@ def update_repair_request_status(
 
     db.commit()
     db.refresh(repair_request)
+    notify_repair_request_updated(repair_request, source="api")
     return RepairRequestDetail.model_validate(repair_request)
 
 
@@ -317,6 +321,7 @@ def take_repair_request(
 
     db.commit()
     db.refresh(repair_request)
+    notify_repair_request_updated(repair_request, source="api")
     return RepairRequestDetail.model_validate(repair_request)
 
 
@@ -340,6 +345,7 @@ def close_repair_request(
     )
     db.commit()
     db.refresh(repair_request)
+    notify_repair_request_updated(repair_request, source="api")
     return RepairRequestDetail.model_validate(repair_request)
 
 
