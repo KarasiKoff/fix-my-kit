@@ -213,6 +213,7 @@ def _commit_publish_webhook(
     is_published: bool,
 ) -> YandexTrackerWebhookResponse:
     db.commit()
+    notify_repair_request_updated(repair_request, source="tracker_webhook_publish")
     _post_tracker_comment(
         repair_request,
         _publish_tracker_comment(is_published),
