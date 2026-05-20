@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal
 
 from sqlalchemy import case, func, or_
-from sqlalchemy.orm import Query, Session, joinedload
+from sqlalchemy.orm import Query, Session, defer, joinedload
 
 from backend.app.models.audience import Audience as AudienceModel
 from backend.app.models.category import Category as CategoryModel
@@ -142,7 +142,7 @@ def fetch_devices_page(
     items = (
         _apply_device_sort(base, sort_by, sort_dir)
         .options(
-            joinedload(DeviceModel.category),
+            joinedload(DeviceModel.category).defer(CategoryModel.icon_data),
             joinedload(DeviceModel.audience),
             joinedload(DeviceModel.responsible),
         )

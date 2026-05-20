@@ -1,46 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { fetchAudienceDevices, fetchAudiences, fetchRoomMap, saveRoomMap } from '../../api/audiences';
 import { useMapDrag } from '../../hooks/useMapDrag';
+import { MapDeviceChip } from '../../components/MapDeviceChip';
 import { useToast } from '../../context/ToastContext';
 import { formatApiError } from '../../utils/formatApiError';
 import type { DeviceOnMap, RoomDeviceListItem } from '../../types/roomMap';
-
-function chipClass(repairStatus: string, highlighted = false): string {
-    const base = 'device-chip';
-    const status = repairStatus === 'in_repair' ? ' device-chip--in-repair' : '';
-    const hl = highlighted ? ' device-chip--highlighted' : '';
-    return base + status + hl;
-}
-
-type DeviceChipProps = {
-    device: DeviceOnMap;
-    xPct: number;
-    yPct: number;
-    onMouseDown: (deviceId: string, e: React.MouseEvent) => void;
-    onRemove: (deviceId: string) => void;
-};
-
-function DeviceChip({ device, xPct, yPct, onMouseDown, onRemove }: DeviceChipProps) {
-    return (
-        <div
-            className={chipClass(device.repairStatus)}
-            style={{ left: `${xPct}%`, top: `${yPct}%` }}
-            onMouseDown={(e) => onMouseDown(device.deviceId, e)}
-        >
-            <span>{device.inventoryNumber}</span>
-            <button
-                type="button"
-                className="device-chip__remove"
-                title="Убрать с карты"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => onRemove(device.deviceId)}
-            >
-                ✕
-            </button>
-        </div>
-    );
-}
 
 type SidebarItemProps = {
     item: RoomDeviceListItem;
@@ -69,9 +34,28 @@ export function RoomMapEditor() {
     const [audienceName, setAudienceName] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [gridCols, setGridCols] = useState(4);
+    const [gridRows, setGridRows] = useState(4);
+    const [chipSizePx, setChipSizePx] = useState(0);
+    const chipProbeRef = useRef<HTMLDivElement>(null);
 
-    const { positions, canvasRef, onChipMouseDown, onCanvasMouseMove, onCanvasMouseUp, dropDevice, removeDevice, resetPositions } =
-        useMapDrag(mapDevices);
+    const { positions, canvasRef, onChipMouseDown, onCanvasMouseMove, onCanvasMouseUp, dropDevice, removeDevice, resetPositions, draggingDeviceId } =
+        useMapDrag({ initialPositions: mapDevices, gridCols, gridRows, chipSizePx });
+
+    useLayoutEffect(() => {
+        const el = chipProbeRef.current;
+        if (!el) return;
+        function measure() {
+            const probe = chipProbeRef.current;
+            if (!probe) return;
+            const w = probe.offsetWidth;
+            if (w > 0) setChipSizePx(w);
+        }
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
 
     useEffect(() => {
         if (!audienceId) return;
@@ -92,7 +76,8 @@ export function RoomMapEditor() {
     const unplacedDevices = allDevices.filter((d) => !placedIds.has(d.id));
 
     function getDeviceInfo(deviceId: string): DeviceOnMap | undefined {
-        return mapDevices.find((d) => d.deviceId === deviceId) ??
+        return (
+            mapDevices.find((d) => d.deviceId === deviceId) ??
             (() => {
                 const found = allDevices.find((d) => d.id === deviceId);
                 if (!found) return undefined;
@@ -103,8 +88,11 @@ export function RoomMapEditor() {
                     deviceName: found.name,
                     inventoryNumber: found.inventoryNumber,
                     repairStatus: found.repairStatus,
+                    categoryId: found.categoryId ?? null,
+                    categoryHasIcon: found.categoryHasIcon ?? false,
                 };
-            })();
+            })()
+        );
     }
 
     function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
@@ -114,8 +102,11 @@ export function RoomMapEditor() {
     function handleDrop(e: React.DragEvent<HTMLDivElement>) {
         const deviceId = e.dataTransfer.getData('deviceId');
         if (!deviceId) return;
-        dropDevice(deviceId, e);
-        // Если устройство ещё не в mapDevices — добавим его
+        const { ok } = dropDevice(deviceId, e);
+        if (!ok) {
+            showError('Эта ячейка уже занята. Выберите другую.');
+            return;
+        }
         if (!mapDevices.find((d) => d.deviceId === deviceId)) {
             const found = allDevices.find((d) => d.id === deviceId);
             if (found) {
@@ -128,10 +119,18 @@ export function RoomMapEditor() {
                         deviceName: found.name,
                         inventoryNumber: found.inventoryNumber,
                         repairStatus: found.repairStatus,
+                        categoryId: found.categoryId ?? null,
+                        categoryHasIcon: found.categoryHasIcon ?? false,
                     },
                 ]);
             }
         }
+    }
+
+    function clampGridDim(raw: string): number {
+        const n = Number.parseInt(raw, 10);
+        if (Number.isNaN(n)) return 1;
+        return Math.min(10, Math.max(1, n));
     }
 
     async function handleSave() {
@@ -157,6 +156,11 @@ export function RoomMapEditor() {
         resetPositions(mapDevices);
     }
 
+    const mapCanvasMinStyle =
+        chipSizePx > 0
+            ? ({ ['--map-canvas-min-h' as string]: `${chipSizePx * 10 + 48}px` } as React.CSSProperties)
+            : undefined;
+
     if (loading) {
         return (
             <main className="page page--centered">
@@ -177,7 +181,6 @@ export function RoomMapEditor() {
             </div>
 
             <div className="map-editor-layout">
-                {/* Sidebar: unplaced devices */}
                 <aside className="map-device-sidebar">
                     <p className="map-device-sidebar__title">Не размещено</p>
                     {unplacedDevices.length === 0 ? (
@@ -194,48 +197,77 @@ export function RoomMapEditor() {
                     )}
                 </aside>
 
-                {/* Canvas */}
-                <div className="map-canvas-wrap">
-                    <div
-                        className="map-canvas"
-                        onMouseMove={onCanvasMouseMove}
-                        onMouseUp={onCanvasMouseUp}
-                        onMouseLeave={onCanvasMouseUp}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                    >
-                        <div className="map-canvas-inner" ref={canvasRef}>
-                            {Object.keys(positions).length === 0 && (
-                                <div className="map-empty-hint">
-                                    Перетащите устройства из панели слева
-                                </div>
-                            )}
-                            {Object.entries(positions).map(([deviceId, pos]) => {
-                                const info = getDeviceInfo(deviceId);
-                                if (!info) return null;
-                                return (
-                                    <DeviceChip
-                                        key={deviceId}
-                                        device={info}
-                                        xPct={pos.xPct}
-                                        yPct={pos.yPct}
-                                        onMouseDown={onChipMouseDown}
-                                        onRemove={removeDevice}
-                                    />
-                                );
-                            })}
+                <div className="map-editor-main-column">
+                    <div className="map-canvas-wrap">
+                        <div
+                            className="map-canvas map-canvas--map-light map-canvas--editor-fill"
+                            style={mapCanvasMinStyle}
+                            onMouseMove={onCanvasMouseMove}
+                            onMouseUp={onCanvasMouseUp}
+                            onMouseLeave={onCanvasMouseUp}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                        >
+                            <div className="map-canvas-inner" ref={canvasRef}>
+                                <div ref={chipProbeRef} className="map-chip-size-probe" aria-hidden />
+                                {Object.keys(positions).length === 0 && (
+                                    <div className="map-empty-hint">Перетащите устройства из панели слева</div>
+                                )}
+                                {Object.entries(positions).map(([deviceId, pos]) => {
+                                    const info = getDeviceInfo(deviceId);
+                                    if (!info) return null;
+                                    return (
+                                        <MapDeviceChip
+                                            key={deviceId}
+                                            device={info}
+                                            xPct={pos.xPct}
+                                            yPct={pos.yPct}
+                                            allowDrag
+                                            snapTransition={draggingDeviceId === deviceId}
+                                            onMouseDown={onChipMouseDown}
+                                            onRemove={removeDevice}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="map-editor-footer-row">
+                        <div className="map-editor-footer__grid-controls">
+                            <label className="map-grid-field">
+                                <span className="map-grid-field__label">Столбцы</span>
+                                <input
+                                    type="number"
+                                    className="map-grid-field__input"
+                                    min={1}
+                                    max={10}
+                                    value={gridCols}
+                                    onChange={(ev) => setGridCols(clampGridDim(ev.target.value))}
+                                />
+                            </label>
+                            <label className="map-grid-field">
+                                <span className="map-grid-field__label">Ряды</span>
+                                <input
+                                    type="number"
+                                    className="map-grid-field__input"
+                                    min={1}
+                                    max={10}
+                                    value={gridRows}
+                                    onChange={(ev) => setGridRows(clampGridDim(ev.target.value))}
+                                />
+                            </label>
+                        </div>
+                        <div className="map-editor-footer__actions">
+                            <button type="button" className="btn-ghost btn-compact" onClick={handleReset} disabled={saving}>
+                                Сбросить
+                            </button>
+                            <button type="button" className="btn-primary btn-compact" onClick={() => void handleSave()} disabled={saving}>
+                                {saving ? 'Сохранение…' : 'Сохранить карту'}
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div className="map-editor-footer">
-                <button type="button" className="btn-ghost btn-compact" onClick={handleReset} disabled={saving}>
-                    Сбросить
-                </button>
-                <button type="button" className="btn-primary btn-compact" onClick={() => void handleSave()} disabled={saving}>
-                    {saving ? 'Сохранение…' : 'Сохранить карту'}
-                </button>
             </div>
         </main>
     );

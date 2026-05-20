@@ -1,10 +1,9 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer, joinedload, load_only
 
 from backend.app.api.deps import get_db, require_admin_only, require_admin_or_sysadmin
 from backend.app.models.audience import Audience
+from backend.app.models.category import Category as CategoryModel
 from backend.app.models.device import Device as DeviceModel
 from backend.app.models.room_device_position import RoomDevicePosition
 from backend.app.schemas.room_map import (
@@ -27,8 +26,10 @@ def _get_audience_or_404(db: Session, audience_id: int) -> Audience:
 
 def _build_map_response(audience_id: int, db: Session) -> RoomMapResponse:
     rows = (
-        db.query(RoomDevicePosition, DeviceModel)
+        db.query(RoomDevicePosition, DeviceModel, CategoryModel)
         .join(DeviceModel, RoomDevicePosition.device_id == DeviceModel.id)
+        .outerjoin(CategoryModel, DeviceModel.category_id == CategoryModel.id)
+        .options(defer(CategoryModel.icon_data))
         .filter(
             RoomDevicePosition.audience_id == audience_id,
             DeviceModel.audience_id == audience_id,
@@ -43,8 +44,10 @@ def _build_map_response(audience_id: int, db: Session) -> RoomMapResponse:
             device_name=dev.name,
             inventory_number=dev.inventory_number,
             repair_status=dev.repair_status.value,
+            category_id=dev.category_id,
+            category_has_icon=bool(cat.icon_mime) if cat is not None else False,
         )
-        for pos, dev in rows
+        for pos, dev, cat in rows
     ]
     return RoomMapResponse(audience_id=audience_id, positions=positions)
 
@@ -69,6 +72,13 @@ def get_audience_devices(
 
     devices = (
         db.query(DeviceModel)
+        .options(
+            joinedload(DeviceModel.category).load_only(
+                CategoryModel.id,
+                CategoryModel.name,
+                CategoryModel.icon_mime,
+            ),
+        )
         .filter(DeviceModel.audience_id == audience_id)
         .order_by(DeviceModel.name)
         .all()
@@ -86,6 +96,8 @@ def get_audience_devices(
             inventory_number=d.inventory_number,
             repair_status=d.repair_status.value,
             is_on_map=d.id in placed_ids,
+            category_id=d.category_id,
+            category_has_icon=bool(d.category.icon_mime) if d.category is not None else False,
         )
         for d in devices
     ]

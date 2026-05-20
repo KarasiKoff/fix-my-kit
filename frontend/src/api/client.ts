@@ -13,7 +13,7 @@ export class ApiError extends Error {
 
 export type ApiRequestOptions = RequestInit & { skipAuth?: boolean };
 
-function apiBaseUrl(): string {
+export function apiBaseUrl(): string {
     const raw = import.meta.env.VITE_API_BASE_URL;
     if (raw === undefined || raw === null || String(raw).trim() === "") {
         return "";
@@ -21,7 +21,7 @@ function apiBaseUrl(): string {
     return String(raw).replace(/\/+$/, "");
 }
 
-function resolveApiUrl(path: string): string {
+export function resolveApiUrl(path: string): string {
     if (path.startsWith("http://") || path.startsWith("https://")) {
         return path;
     }

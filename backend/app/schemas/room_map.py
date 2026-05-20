@@ -15,6 +15,8 @@ class DeviceOnMap(DevicePositionItem):
     device_name: str
     inventory_number: str
     repair_status: str
+    category_id: UUID | None = None
+    category_has_icon: bool = False
 
 
 class RoomMapResponse(BaseModel):
@@ -34,6 +36,8 @@ class RoomDeviceListItem(BaseModel):
     inventory_number: str
     repair_status: str
     is_on_map: bool = False
+    category_id: UUID | None = None
+    category_has_icon: bool = False
 
 
 class RoomDeviceListResponse(BaseModel):

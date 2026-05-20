@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { useAppData } from '../../context/AppDataContext';
 import { createDevice } from '../../api/devices';
 import { fetchCategories, type CategoryDto } from '../../api/categories';
+import { CategorySelectWithIcons } from '../../components/CategorySelectWithIcons';
 import { fetchAudiences, type AudienceDto } from '../../api/audiences';
 import { fetchUsers, type UserListItem } from '../../api/users';
 import { Device } from '../../types/device';
@@ -101,17 +102,12 @@ export function AdminAddDevice() {
                         <span className="admin-inline-label">Название</span>
                         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ноутбук Lenovo T14" required />
                     </label>
-                    <label className="admin-device-field">
-                        <span className="admin-inline-label">Категория</span>
-                        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                            <option value="">—</option>
-                            {categories.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    <CategorySelectWithIcons
+                        categories={categories}
+                        value={categoryId}
+                        onChange={setCategoryId}
+                        disabled={Boolean(loadError)}
+                    />
                     <label className="admin-device-field">
                         <span className="admin-inline-label">Серийный номер</span>
                         <input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} placeholder="LNV-T14-2391" />

@@ -1,5 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DeviceOnMap } from '../types/roomMap';
+import {
+    cellCenterToPct,
+    computeGridLayout,
+    isCellOccupiedByOther,
+    nearestCellFromClient,
+} from '../utils/roomMapGrid';
 
 export type DraftPositions = Record<string, { xPct: number; yPct: number }>;
 
@@ -11,7 +17,14 @@ type DragState = {
     origYPct: number;
 };
 
-export function useMapDrag(initialPositions: DeviceOnMap[]) {
+export type UseMapDragOptions = {
+    initialPositions: DeviceOnMap[];
+    gridCols: number;
+    gridRows: number;
+    chipSizePx: number;
+};
+
+export function useMapDrag({ initialPositions, gridCols, gridRows, chipSizePx }: UseMapDragOptions) {
     const [positions, setPositions] = useState<DraftPositions>(() =>
         Object.fromEntries(
             initialPositions.map((p) => [p.deviceId, { xPct: p.xPct, yPct: p.yPct }]),
@@ -20,12 +33,33 @@ export function useMapDrag(initialPositions: DeviceOnMap[]) {
 
     const canvasRef = useRef<HTMLDivElement>(null);
     const dragging = useRef<DragState | null>(null);
+    const positionsRef = useRef(positions);
+    positionsRef.current = positions;
+
+    const gridRef = useRef({ cols: gridCols, rows: gridRows, chip: chipSizePx });
+    gridRef.current = { cols: gridCols, rows: gridRows, chip: chipSizePx };
+
+    const [draggingDeviceId, setDraggingDeviceId] = useState<string | null>(null);
+
+    const readLayout = useCallback(() => {
+        const el = canvasRef.current;
+        if (!el) return null;
+        const { cols, rows, chip: chipFromState } = gridRef.current;
+        const probe = el.querySelector<HTMLElement>('.map-chip-size-probe');
+        let chip = chipFromState;
+        if (chip <= 0 && probe && probe.offsetWidth > 0) {
+            chip = probe.offsetWidth;
+        }
+        if (chip <= 0) return null;
+        const r = el.getBoundingClientRect();
+        return computeGridLayout(r.width, r.height, chip, cols, rows);
+    }, []);
 
     const onChipMouseDown = useCallback(
         (deviceId: string, e: React.MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
-            const pos = positions[deviceId];
+            const pos = positionsRef.current[deviceId];
             if (!pos) return;
             dragging.current = {
                 deviceId,
@@ -34,35 +68,111 @@ export function useMapDrag(initialPositions: DeviceOnMap[]) {
                 origXPct: pos.xPct,
                 origYPct: pos.yPct,
             };
+            setDraggingDeviceId(deviceId);
         },
-        [positions],
+        [],
     );
 
-    const onCanvasMouseMove = useCallback((e: React.MouseEvent) => {
-        if (!dragging.current || !canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const dx = ((e.clientX - dragging.current.startClientX) / rect.width) * 100;
-        const dy = ((e.clientY - dragging.current.startClientY) / rect.height) * 100;
-        const newX = Math.max(0, Math.min(100, dragging.current.origXPct + dx));
-        const newY = Math.max(0, Math.min(100, dragging.current.origYPct + dy));
-        setPositions((prev) => ({
-            ...prev,
-            [dragging.current!.deviceId]: { xPct: newX, yPct: newY },
-        }));
+    useEffect(() => {
+        if (!draggingDeviceId) return;
+
+        function applySnapFromClient(clientX: number, clientY: number) {
+            const drag = dragging.current;
+            const canvas = canvasRef.current;
+            if (!drag || !canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return;
+            const layout = readLayout();
+            const { deviceId } = drag;
+            if (!layout) {
+                const dx = ((clientX - drag.startClientX) / rect.width) * 100;
+                const dy = ((clientY - drag.startClientY) / rect.height) * 100;
+                const newX = Math.max(0, Math.min(100, drag.origXPct + dx));
+                const newY = Math.max(0, Math.min(100, drag.origYPct + dy));
+                setPositions((prev) => ({
+                    ...prev,
+                    [deviceId]: { xPct: newX, yPct: newY },
+                }));
+                return;
+            }
+            const { ci, cj } = nearestCellFromClient(layout, clientX, clientY, rect);
+            const { xPct, yPct } = cellCenterToPct(layout, ci, cj);
+            setPositions((prev) => ({
+                ...prev,
+                [deviceId]: { xPct, yPct },
+            }));
+        }
+
+        function onMove(ev: MouseEvent) {
+            applySnapFromClient(ev.clientX, ev.clientY);
+        }
+
+        function onUp(ev: MouseEvent) {
+            const drag = dragging.current;
+            const canvas = canvasRef.current;
+            if (!drag || !canvas) {
+                dragging.current = null;
+                setDraggingDeviceId(null);
+                return;
+            }
+            const layout = readLayout();
+            const rect = canvas.getBoundingClientRect();
+            if (layout) {
+                const { ci, cj } = nearestCellFromClient(layout, ev.clientX, ev.clientY, rect);
+                const prev = positionsRef.current;
+                const blocked = isCellOccupiedByOther(prev, layout, ci, cj, drag.deviceId);
+                if (blocked) {
+                    setPositions((p) => ({
+                        ...p,
+                        [drag.deviceId]: { xPct: drag.origXPct, yPct: drag.origYPct },
+                    }));
+                }
+            }
+            dragging.current = null;
+            setDraggingDeviceId(null);
+        }
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        return () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+        };
+    }, [draggingDeviceId, readLayout]);
+
+    const onCanvasMouseMove = useCallback(() => {
+        /* перетаскивание обрабатывается на window */
     }, []);
 
     const onCanvasMouseUp = useCallback(() => {
-        dragging.current = null;
+        /* отпускание обрабатывается на window */
     }, []);
 
-    const dropDevice = useCallback((deviceId: string, e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
-        const yPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-        setPositions((prev) => ({ ...prev, [deviceId]: { xPct, yPct } }));
-    }, []);
+    const dropDevice = useCallback(
+        (deviceId: string, e: React.DragEvent<HTMLDivElement>): { ok: boolean } => {
+            e.preventDefault();
+            const canvas = canvasRef.current;
+            if (!canvas) return { ok: false };
+            const layout = readLayout();
+            if (!layout) {
+                const rect = canvas.getBoundingClientRect();
+                const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                const yPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+                setPositions((prev) => ({ ...prev, [deviceId]: { xPct, yPct } }));
+                return { ok: true };
+            }
+            const rect = canvas.getBoundingClientRect();
+            const { ci, cj } = nearestCellFromClient(layout, e.clientX, e.clientY, rect);
+            const prev = positionsRef.current;
+            if (isCellOccupiedByOther(prev, layout, ci, cj, deviceId)) {
+                return { ok: false };
+            }
+            const { xPct, yPct } = cellCenterToPct(layout, ci, cj);
+            setPositions((p) => ({ ...p, [deviceId]: { xPct, yPct } }));
+            return { ok: true };
+        },
+        [readLayout],
+    );
 
     const removeDevice = useCallback((deviceId: string) => {
         setPositions((prev) => {
@@ -87,5 +197,6 @@ export function useMapDrag(initialPositions: DeviceOnMap[]) {
         dropDevice,
         removeDevice,
         resetPositions,
+        draggingDeviceId,
     };
 }

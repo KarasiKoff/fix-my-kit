@@ -39,6 +39,8 @@ type DeviceOnMapApi = {
     device_name: string;
     inventory_number: string;
     repair_status: string;
+    category_id?: string | null;
+    category_has_icon?: boolean;
 };
 
 function mapDeviceOnMap(item: DeviceOnMapApi): DeviceOnMap {
@@ -49,6 +51,8 @@ function mapDeviceOnMap(item: DeviceOnMapApi): DeviceOnMap {
         deviceName: item.device_name,
         inventoryNumber: item.inventory_number,
         repairStatus: item.repair_status as DeviceOnMap['repairStatus'],
+        categoryId: item.category_id ?? null,
+        categoryHasIcon: Boolean(item.category_has_icon),
     };
 }
 
@@ -78,6 +82,8 @@ export async function fetchAudienceDevices(audienceId: number): Promise<RoomDevi
             inventory_number: string;
             repair_status: string;
             is_on_map: boolean;
+            category_id?: string | null;
+            category_has_icon?: boolean;
         }>;
     }>(`/api/audiences/${audienceId}/devices`);
     return data.items.map((item) => ({
@@ -86,5 +92,7 @@ export async function fetchAudienceDevices(audienceId: number): Promise<RoomDevi
         inventoryNumber: item.inventory_number,
         repairStatus: item.repair_status as RoomDeviceListItem['repairStatus'],
         isOnMap: item.is_on_map,
+        categoryId: item.category_id ?? null,
+        categoryHasIcon: Boolean(item.category_has_icon),
     }));
 }

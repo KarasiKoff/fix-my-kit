@@ -3,10 +3,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, defer, joinedload
 
 from backend.app.api.deps import get_db, require_roles
 from backend.app.core.config import settings
+from backend.app.models.category import Category as CategoryModel
 from backend.app.models.device import Device as DeviceModel
 from backend.app.models.enums import RepairStatus, RequestStatus, UserRole
 from backend.app.models.repair_history import RepairHistory
@@ -50,7 +51,7 @@ def _to_device_detail(db: Session, device: DeviceModel) -> DeviceDetail:
 
 def _device_base_query(db: Session):
     return db.query(DeviceModel).options(
-        joinedload(DeviceModel.category),
+        joinedload(DeviceModel.category).defer(CategoryModel.icon_data),
         joinedload(DeviceModel.audience),
         joinedload(DeviceModel.responsible),
     )

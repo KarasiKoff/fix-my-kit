@@ -1,8 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
-import { createCategory, deleteCategory, fetchCategories, updateCategory, type CategoryDto } from '../../api/categories';
+import {
+    createCategory,
+    deleteCategory,
+    deleteCategoryIcon,
+    fetchCategories,
+    updateCategory,
+    uploadCategoryIcon,
+    type CategoryDto,
+} from '../../api/categories';
 import { formatApiError } from '../../utils/formatApiError';
 
 export function AdminAddCategory() {
@@ -12,9 +20,12 @@ export function AdminAddCategory() {
 
     const [rows, setRows] = useState<CategoryDto[]>([]);
     const [newName, setNewName] = useState('');
+    const newIconInputRef = useRef<HTMLInputElement>(null);
+    const [loading, setLoading] = useState(true);
+
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
-    const [loading, setLoading] = useState(true);
+    const rowIconInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
     async function reload() {
         setLoading(true);
@@ -34,16 +45,17 @@ export function AdminAddCategory() {
 
     async function handleAdd(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!isAdmin) {
-            return;
-        }
+        if (!isAdmin) return;
         const n = newName.trim();
-        if (!n) {
-            return;
-        }
+        if (!n) return;
+        const file = newIconInputRef.current?.files?.[0] ?? null;
         try {
-            await createCategory(n);
+            const created = await createCategory(n);
+            if (file) {
+                await uploadCategoryIcon(created.id, file);
+            }
             setNewName('');
+            if (newIconInputRef.current) newIconInputRef.current.value = '';
             showSuccess('Категория добавлена');
             await reload();
         } catch (err) {
@@ -57,13 +69,9 @@ export function AdminAddCategory() {
     }
 
     async function saveEdit() {
-        if (!isAdmin || !editingId) {
-            return;
-        }
+        if (!isAdmin || !editingId) return;
         const n = editName.trim();
-        if (!n) {
-            return;
-        }
+        if (!n) return;
         try {
             await updateCategory(editingId, { name: n });
             setEditingId(null);
@@ -75,18 +83,39 @@ export function AdminAddCategory() {
     }
 
     async function removeRow(row: CategoryDto) {
-        if (!isAdmin) {
-            return;
-        }
+        if (!isAdmin) return;
         if (!window.confirm(`Удалить категорию «${row.name}»? У связанных устройств поле категории будет сброшено.`)) {
             return;
         }
         try {
             await deleteCategory(row.id);
-            if (editingId === row.id) {
-                setEditingId(null);
-            }
+            if (editingId === row.id) setEditingId(null);
             showSuccess('Категория удалена');
+            await reload();
+        } catch (err) {
+            showError(formatApiError(err));
+        }
+    }
+
+    async function onPickRowIcon(categoryId: string, fileList: FileList | null) {
+        if (!isAdmin || !fileList?.[0]) return;
+        try {
+            await uploadCategoryIcon(categoryId, fileList[0]);
+            const input = rowIconInputRefs.current[categoryId];
+            if (input) input.value = '';
+            showSuccess('Иконка обновлена');
+            await reload();
+        } catch (err) {
+            showError(formatApiError(err));
+        }
+    }
+
+    async function onRemoveIcon(categoryId: string) {
+        if (!isAdmin) return;
+        if (!window.confirm('Удалить иконку категории?')) return;
+        try {
+            await deleteCategoryIcon(categoryId);
+            showSuccess('Иконка удалена');
             await reload();
         } catch (err) {
             showError(formatApiError(err));
@@ -116,6 +145,13 @@ export function AdminAddCategory() {
                             disabled={!isAdmin}
                         />
                     </label>
+                    <div className="admin-inline-field admin-category-icon-field">
+                        <span className="admin-inline-label">Иконка</span>
+                        <input ref={newIconInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" disabled={!isAdmin} />
+                        <span className="muted-text" style={{ fontSize: '0.75rem' }}>
+                            PNG, JPEG, WebP или SVG, до 1 МБ
+                        </span>
+                    </div>
                     <div className="admin-inline-actions">
                         <button type="submit" className="btn-primary" disabled={!isAdmin}>
                             Добавить
@@ -170,6 +206,28 @@ export function AdminAddCategory() {
                                                     <button type="button" className="btn-danger btn-compact" disabled={!isAdmin} onClick={() => void removeRow(row)}>
                                                         Удалить
                                                     </button>
+                                                    {isAdmin ? (
+                                                        <div className="admin-category-row-icon-actions" style={{ justifyContent: 'center' }}>
+                                                            <label className="muted-text" style={{ fontSize: '0.72rem', cursor: 'pointer' }}>
+                                                                Иконка
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"
+                                                                    className="admin-category-row-file"
+                                                                    ref={(el) => {
+                                                                        rowIconInputRefs.current[row.id] = el;
+                                                                    }}
+                                                                    onChange={(e) => void onPickRowIcon(row.id, e.target.files)}
+                                                                    style={{ display: 'block', marginTop: 4, maxWidth: 140 }}
+                                                                />
+                                                            </label>
+                                                            {row.has_icon ? (
+                                                                <button type="button" className="btn-ghost btn-compact" onClick={() => void onRemoveIcon(row.id)}>
+                                                                    Убрать иконку
+                                                                </button>
+                                                            ) : null}
+                                                        </div>
+                                                    ) : null}
                                                 </>
                                             )}
                                         </td>

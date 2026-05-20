@@ -5,6 +5,8 @@ export type DeviceOnMap = {
     deviceName: string;
     inventoryNumber: string;
     repairStatus: 'not_in_repair' | 'in_repair';
+    categoryId?: string | null;
+    categoryHasIcon?: boolean;
 };
 
 export type RoomMapData = {
@@ -18,4 +20,6 @@ export type RoomDeviceListItem = {
     inventoryNumber: string;
     repairStatus: 'not_in_repair' | 'in_repair';
     isOnMap: boolean;
+    categoryId?: string | null;
+    categoryHasIcon?: boolean;
 };

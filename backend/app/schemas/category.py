@@ -23,6 +23,7 @@ class Category(CategoryBase):
 
     id: UUID
     created_at: datetime
+    has_icon: bool = False
 
 
 class CategoryList(BaseModel):

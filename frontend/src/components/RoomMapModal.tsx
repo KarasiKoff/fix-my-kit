@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchRoomMap } from '../api/audiences';
+import { MapDeviceChip } from './MapDeviceChip';
 import { formatApiError } from '../utils/formatApiError';
 import type { DeviceOnMap } from '../types/roomMap';
 
@@ -9,13 +10,6 @@ type Props = {
     highlightedDeviceId: string;
     onClose: () => void;
 };
-
-function chipClass(repairStatus: string, highlighted: boolean): string {
-    const base = 'device-chip';
-    const status = repairStatus === 'in_repair' ? ' device-chip--in-repair' : '';
-    const hl = highlighted ? ' device-chip--highlighted' : '';
-    return base + status + hl;
-}
 
 export function RoomMapModal({ audienceId, audienceName, highlightedDeviceId, onClose }: Props) {
     const [positions, setPositions] = useState<DeviceOnMap[]>([]);
@@ -72,16 +66,17 @@ export function RoomMapModal({ audienceId, audienceName, highlightedDeviceId, on
                 ) : positions.length === 0 ? (
                     <p className="muted-text">Карта не настроена для этого кабинета.</p>
                 ) : (
-                    <div className="map-canvas" style={{ pointerEvents: 'none' }}>
+                    <div className="map-canvas map-canvas--map-light map-canvas--editor-fill" style={{ pointerEvents: 'none' }}>
                         <div className="map-canvas-inner">
                             {positions.map((p) => (
-                                <div
+                                <MapDeviceChip
                                     key={p.deviceId}
-                                    className={chipClass(p.repairStatus, p.deviceId === highlightedDeviceId)}
-                                    style={{ left: `${p.xPct}%`, top: `${p.yPct}%`, cursor: 'default' }}
-                                >
-                                    {p.inventoryNumber}
-                                </div>
+                                    device={p}
+                                    xPct={p.xPct}
+                                    yPct={p.yPct}
+                                    highlighted={p.deviceId === highlightedDeviceId}
+                                    cursor="default"
+                                />
                             ))}
                         </div>
                     </div>

@@ -2,9 +2,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, defer, joinedload
 
 from backend.app.api.deps import get_db
+from backend.app.models.category import Category as CategoryModel
 from backend.app.models.device import Device as DeviceModel
 from backend.app.models.enums import RequestStatus
 from backend.app.models.repair_request import RepairRequest
@@ -25,7 +26,10 @@ def get_public_device_by_inventory(
     inv = number.strip()
     device = (
         db.query(DeviceModel)
-        .options(joinedload(DeviceModel.category), joinedload(DeviceModel.audience))
+        .options(
+            joinedload(DeviceModel.category).defer(CategoryModel.icon_data),
+            joinedload(DeviceModel.audience),
+        )
         .filter(func.lower(DeviceModel.inventory_number) == inv.lower())
         .first()
     )
@@ -38,7 +42,10 @@ def get_public_device_by_inventory(
 def get_public_device(device_id: UUID, db: Session = Depends(get_db)) -> PublicDeviceResponse:
     device = (
         db.query(DeviceModel)
-        .options(joinedload(DeviceModel.category), joinedload(DeviceModel.audience))
+        .options(
+            joinedload(DeviceModel.category).defer(CategoryModel.icon_data),
+            joinedload(DeviceModel.audience),
+        )
         .filter(DeviceModel.id == device_id)
         .first()
     )
@@ -52,7 +59,10 @@ def get_public_repair_summary(device_id: UUID, db: Session = Depends(get_db)) ->
     """Публичная история ремонтов устройства — для гостей после сканирования QR."""
     device = (
         db.query(DeviceModel)
-        .options(joinedload(DeviceModel.category), joinedload(DeviceModel.audience))
+        .options(
+            joinedload(DeviceModel.category).defer(CategoryModel.icon_data),
+            joinedload(DeviceModel.audience),
+        )
         .filter(DeviceModel.id == device_id)
         .first()
     )
