@@ -15,6 +15,7 @@ from backend.app.models.enums import RepairStatus, RequestStatus
 from backend.app.models.repair_request import RepairRequest
 from backend.app.models.user import User
 from backend.app.schemas.tracker_webhook import (
+    YandexTrackerPublishPayload,
     YandexTrackerSysadminTakenPayload,
     YandexTrackerWebhookPayload,
     YandexTrackerWebhookResponse,
@@ -30,8 +31,10 @@ from backend.app.services.repair_request_sysadmin_taken_service import (
 )
 from backend.app.services.tracker_service import (
     TrackerUnavailableError,
+    PUBLISH_TRACKER_COMMENT,
     SYSADMIN_RETURNED_TRACKER_COMMENT,
     SYSADMIN_TAKEN_TRACKER_COMMENT,
+    UNPUBLISH_TRACKER_COMMENT,
     post_issue_comment,
     tracker_comment_status_sync,
 )
@@ -170,6 +173,61 @@ def _post_tracker_comment(
         )
 
 
+def _publish_tracker_comment(is_published: bool) -> str:
+    return PUBLISH_TRACKER_COMMENT if is_published else UNPUBLISH_TRACKER_COMMENT
+
+
+def _publish_webhook_status(is_published: bool) -> str:
+    return "published" if is_published else "unpublished"
+
+
+def _apply_publish_flag(
+    db: Session,
+    repair_request: RepairRequest,
+    is_published: bool,
+) -> bool:
+    """Меняет is_published; True, если значение изменилось."""
+    if repair_request.is_published == is_published:
+        return False
+    repair_request.is_published = is_published
+    note = (
+        "Публикация для гостей: включена"
+        if is_published
+        else "Публикация для гостей: снята"
+    )
+    add_repair_history(
+        db,
+        device_id=repair_request.device_id,
+        repair_request_id=repair_request.id,
+        old_status=None,
+        new_status=None,
+        note=note,
+    )
+    return True
+
+
+def _commit_publish_webhook(
+    db: Session,
+    repair_request: RepairRequest,
+    *,
+    is_published: bool,
+) -> YandexTrackerWebhookResponse:
+    db.commit()
+    _post_tracker_comment(
+        repair_request,
+        _publish_tracker_comment(is_published),
+        log_event="publish",
+    )
+    return YandexTrackerWebhookResponse(
+        status=_publish_webhook_status(is_published),
+        repair_request_id=str(repair_request.id),
+        detail=None,
+        request_status=repair_request.status.value,
+        closed_by_login=None,
+        is_published=repair_request.is_published,
+    )
+
+
 def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
     """Переоткрытие из Закрыт: сбрасываем поля закрытия, устройство снова в ремонте"""
     repair_request.closed_at = None
@@ -186,8 +244,8 @@ def _reopen_from_closed(db: Session, repair_request: RepairRequest) -> None:
     description=(
         "Один URL. В JSON: `tracker_status` = `{{issue.status}}` — строка как в Трекере, "
         "точное совпадение с ключами в `TRACKER_STATUS_ALIASES`. "
-        "Пустой `tracker_status` — заявку не меняем (noop). Закрытие только при статусе «Закрыт». "
-        "После смены статуса в БД — красный комментарий в задачу. "
+        "Пустой `tracker_status` — noop. Закрытие только при статусе «Закрыт». "
+        "Публикация — отдельный URL `/yandex-tracker/publish` "
         f"Заголовок `{TRACKER_WEBHOOK_SECRET_HEADER}` = `TRACKER_WEBHOOK_SECRET`."
     ),
 )
@@ -242,8 +300,6 @@ def yandex_tracker_close_repair_request(
             detail="invalid_status_transition",
         )
 
-    rid = str(repair_request.id)
-
     if target == RequestStatus.CLOSED:
         fallback = _webhook_fallback_user(db)
         closer = _resolve_closed_by_user(db, payload.user, fallback)
@@ -263,7 +319,7 @@ def yandex_tracker_close_repair_request(
         )
         return YandexTrackerWebhookResponse(
             status="closed",
-            repair_request_id=rid,
+            repair_request_id=str(repair_request.id),
             detail=None,
             request_status=RequestStatus.CLOSED.value,
             closed_by_login=closer.login,
@@ -295,10 +351,54 @@ def yandex_tracker_close_repair_request(
 
     return YandexTrackerWebhookResponse(
         status="updated",
-        repair_request_id=rid,
+        repair_request_id=str(repair_request.id),
         detail=None,
         request_status=target.value,
         closed_by_login=None,
+    )
+
+
+@router.post(
+    "/yandex-tracker/publish",
+    response_model=YandexTrackerWebhookResponse,
+    summary="Публикация / снятие с публикации из Yandex Tracker",
+    description=(
+        "Отдельный триггер по макросу: только `is_published` true/false. "
+        "После успеха в задачу пишется красный комментарий от TRACKER_TOKEN."
+    ),
+)
+def yandex_tracker_publish(
+    payload: YandexTrackerPublishPayload,
+    db: Session = Depends(get_db),
+    x_tracker_webhook_secret: Annotated[
+        str | None, Header(alias=TRACKER_WEBHOOK_SECRET_HEADER)
+    ] = None,
+) -> YandexTrackerWebhookResponse:
+    _verify_webhook_secret(x_tracker_webhook_secret)
+
+    key = (payload.issue_key or "").strip()
+    iid = (payload.issue_id or "").strip()
+    repair_request = _find_repair_request(db, key, iid)
+    if repair_request is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="repair_request_not_found_for_tracker_issue",
+        )
+
+    rid = str(repair_request.id)
+    if repair_request.is_published == payload.is_published:
+        return YandexTrackerWebhookResponse(
+            status="noop",
+            repair_request_id=rid,
+            detail="already_published" if payload.is_published else "already_unpublished",
+            request_status=repair_request.status.value,
+            closed_by_login=None,
+            is_published=repair_request.is_published,
+        )
+
+    _apply_publish_flag(db, repair_request, payload.is_published)
+    return _commit_publish_webhook(
+        db, repair_request, is_published=payload.is_published
     )
 
 
