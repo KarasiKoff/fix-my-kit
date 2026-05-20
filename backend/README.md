@@ -89,3 +89,13 @@ alembic upgrade head
 - `PyJWT`
 - `python-multipart`
 - `alembic`
+
+## SSE (live-обновления заявок)
+
+`GET /api/events/stream?access_token=<JWT>` — поток Server-Sent Events для admin/sysadmin.
+
+- Событие `repair_request` с JSON: `repair_request_id`, `device_id`, `status`, `source`.
+- Опционально `repair_request_id=<uuid>` — только события по одной заявке.
+- Публикация: после изменений в API и вебхуках Трекера (in-memory hub, **один процесс** uvicorn).
+
+На проде в nginx для API: `proxy_buffering off;` и увеличенный `proxy_read_timeout` (см. `deploy/nginx-fixmykit.example.conf`).
