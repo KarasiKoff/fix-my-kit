@@ -983,6 +983,41 @@ td.status-cell {
   width: 100%;
 }
 
+.admin-device-bulk-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-device-bulk-toggle {
+  margin: 0;
+}
+
+.admin-device-bulk-quantity {
+  margin: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.admin-bulk-range {
+  width: 100%;
+  margin: 4px 0;
+}
+
+.admin-bulk-count-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-bulk-count-row input[type='number'] {
+  width: 5rem;
+}
+
 .repair-filters-row {
   display: flex;
   flex-direction: column;
