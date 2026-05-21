@@ -2,9 +2,11 @@ from datetime import datetime, timezone
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from backend.app.api.deps import get_db, require_admin_or_sysadmin
 from backend.app.models.device import Device
@@ -24,12 +26,28 @@ from backend.app.schemas.repair_request import (
     RepairRequestTake,
 )
 from backend.app.schemas.suggest import SuggestResponse
+from backend.app.schemas.attachments import TrackerAttachmentItem, TrackerAttachmentList
 from backend.app.schemas.tracker import TrackerBulkSyncResponse, TrackerSyncResponse
 from backend.app.services.repair_history_service import add_repair_history
 from backend.app.services.realtime_notify import notify_repair_request_updated
+from backend.app.services.repair_request_attachment_service import (
+    AttachmentLimitError,
+    AttachmentValidationError,
+    http_error_from_attachment_exc,
+    recompute_attachment_fields,
+    refresh_attachment_fields_from_disk,
+    sync_tracker_issue_and_attachments,
+    tracker_attachment_kind,
+    validate_and_store_uploads,
+)
 from backend.app.services.repair_request_closure_service import record_repair_request_closed
 from backend.app.services.repair_request_list_query import fetch_repair_requests_page, suggest_repair_requests
-from backend.app.services.tracker_service import TrackerUnavailableError, sync_repair_request_to_tracker
+from backend.app.services.tracker_service import (
+    TrackerUnavailableError,
+    fetch_attachment_content,
+    issue_ref_for,
+    list_issue_attachments,
+)
 
 router = APIRouter(prefix="/api", tags=["repair-requests"])
 
@@ -76,18 +94,55 @@ def ensure_no_active_request(db: Session, device_id: UUID) -> None:
 
 
 def _try_tracker_sync(db: Session, request_id: UUID) -> bool:
-    """Пытается создать/подтянуть задачу в Трекере. При ошибке не бросает исключение наружу."""
+    """Пытается создать/подтянуть задачу в Tracker и догрузить вложения."""
     repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
+    return sync_tracker_issue_and_attachments(db, repair_request)
+
+
+def _collect_upload_files(form) -> list[UploadFile]:
+    files: list[UploadFile] = []
+    for key in ("files", "file"):
+        for item in form.getlist(key):
+            if isinstance(item, StarletteUploadFile) and item.filename:
+                files.append(item)
+    return files
+
+
+async def _parse_multipart_create(request: Request) -> tuple[dict, list[UploadFile]]:
+    form = await request.form()
+    device_raw = form.get("device_id")
+    if device_raw is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="device_id_required")
+    description = str(form.get("description") or "").strip()
+    if not description:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="description_required")
+    applicant = form.get("applicant_name")
+    applicant_name = str(applicant).strip() if applicant is not None else None
+    sync_raw = form.get("sync_to_tracker")
+    sync_to_tracker = True
+    if sync_raw is not None:
+        sync_to_tracker = str(sync_raw).lower() in ("1", "true", "yes", "on")
+    return {
+        "device_id": UUID(str(device_raw)),
+        "description": description,
+        "applicant_name": applicant_name,
+        "sync_to_tracker": sync_to_tracker,
+    }, _collect_upload_files(form)
+
+
+async def _store_uploads_safe(
+    db: Session,
+    repair_request: RepairRequest,
+    uploads: list[UploadFile],
+) -> None:
+    if not uploads:
+        return
     try:
-        result = sync_repair_request_to_tracker(repair_request)
-    except TrackerUnavailableError:
-        return False
-    repair_request.tracker_ticket_id = result.ticket_id
-    repair_request.tracker_ticket_key = result.ticket_key
-    repair_request.tracker_ticket_url = result.ticket_url
-    repair_request.last_sync_at = result.synced_at
-    db.commit()
-    return True
+        await validate_and_store_uploads(repair_request, uploads)
+        db.commit()
+    except (AttachmentLimitError, AttachmentValidationError) as exc:
+        db.rollback()
+        raise http_error_from_attachment_exc(exc) from exc
 
 
 def _record_request_created(db: Session, repair_request: RepairRequest) -> None:
@@ -173,7 +228,7 @@ def sync_unsynchronized_repair_requests(
     db: Session = Depends(get_db),
     _: User = Depends(require_admin_or_sysadmin),
 ) -> TrackerBulkSyncResponse:
-    """Синхронизирует с Трекером все заявки без ticket id и key."""
+    """Синхронизирует с Tracker все заявки без ticket id и key."""
     rows = (
         db.query(RepairRequest.id)
         .filter(
@@ -197,50 +252,106 @@ def sync_unsynchronized_repair_requests(
 
 
 @router.post("/repair-requests", response_model=RepairRequestResponse, status_code=status.HTTP_201_CREATED)
-def create_repair_request(
-    payload: RepairRequestCreate,
+async def create_repair_request(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin_or_sysadmin),
 ) -> RepairRequestResponse:
-    ensure_device_exists(db, payload.device_id)
-    ensure_no_active_request(db, payload.device_id)
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "multipart/form-data" in content_type:
+        fields, uploads = await _parse_multipart_create(request)
+        device_id = fields["device_id"]
+        description = fields["description"]
+        applicant_name = fields["applicant_name"]
+        sync_to_tracker = fields["sync_to_tracker"]
+        author_user_id = current_user.id
+    else:
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_json") from exc
+        payload = RepairRequestCreate.model_validate(body)
+        device_id = payload.device_id
+        description = payload.description
+        applicant_name = payload.applicant_name
+        sync_to_tracker = payload.sync_to_tracker
+        author_user_id = payload.author_user_id or current_user.id
+        uploads = []
+
+    ensure_device_exists(db, device_id)
+    ensure_no_active_request(db, device_id)
 
     repair_request = RepairRequest(
-        device_id=payload.device_id,
-        description=payload.description,
-        applicant_name=payload.applicant_name,
-        author_user_id=payload.author_user_id or current_user.id,
+        device_id=device_id,
+        description=description,
+        applicant_name=applicant_name,
+        author_user_id=author_user_id,
     )
     db.add(repair_request)
     db.flush()
     _record_request_created(db, repair_request)
     db.commit()
+    db.refresh(repair_request)
+
+    await _store_uploads_safe(db, repair_request, uploads)
     db.refresh(repair_request)
     notify_repair_request_updated(repair_request, source="api")
 
-    if payload.sync_to_tracker:
+    if sync_to_tracker:
         _try_tracker_sync(db, repair_request.id)
+    elif uploads and issue_ref_for(repair_request) is None:
+        recompute_attachment_fields(repair_request)
+        db.commit()
     db.refresh(repair_request)
-    return RepairRequestResponse.model_validate(repair_request)
+    return _repair_request_list_item(repair_request)
 
 
 @router.post("/public/repair-requests", response_model=PublicRepairRequestResponse, status_code=status.HTTP_201_CREATED)
-def create_public_repair_request(
-    payload: PublicRepairRequestCreate,
+async def create_public_repair_request(
+    request: Request,
     db: Session = Depends(get_db),
 ) -> PublicRepairRequestResponse:
-    ensure_device_exists(db, payload.device_id)
-    ensure_no_active_request(db, payload.device_id)
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        device_raw = form.get("device_id")
+        if device_raw is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="device_id_required")
+        applicant_raw = form.get("applicant_name")
+        if applicant_raw is None or not str(applicant_raw).strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="applicant_name_required")
+        description = str(form.get("description") or "").strip()
+        if not description:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="description_required")
+        device_id = UUID(str(device_raw))
+        applicant_name = str(applicant_raw).strip()
+        uploads = _collect_upload_files(form)
+    else:
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_json") from exc
+        payload = PublicRepairRequestCreate.model_validate(body)
+        device_id = payload.device_id
+        applicant_name = payload.applicant_name
+        description = payload.description
+        uploads = []
+
+    ensure_device_exists(db, device_id)
+    ensure_no_active_request(db, device_id)
 
     repair_request = RepairRequest(
-        device_id=payload.device_id,
-        applicant_name=payload.applicant_name,
-        description=payload.description,
+        device_id=device_id,
+        applicant_name=applicant_name,
+        description=description,
     )
     db.add(repair_request)
     db.flush()
     _record_request_created(db, repair_request)
     db.commit()
+    db.refresh(repair_request)
+
+    await _store_uploads_safe(db, repair_request, uploads)
     db.refresh(repair_request)
 
     _try_tracker_sync(db, repair_request.id)
@@ -253,10 +364,19 @@ def create_public_repair_request(
 def get_repair_request(
     request_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin_or_sysadmin),
+    _: User = Depends(require_admin_or_sysadmin),
 ) -> RepairRequestDetail:
-    repair_request = get_repair_request_or_404(db, request_id)
-    return RepairRequestDetail.model_validate(repair_request)
+    repair_request = (
+        db.query(RepairRequest)
+        .options(joinedload(RepairRequest.device))
+        .filter(RepairRequest.id == request_id)
+        .first()
+    )
+    if repair_request is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="repair_request_not_found")
+    refresh_attachment_fields_from_disk(repair_request)
+    db.commit()
+    return _repair_request_list_item(repair_request)
 
 
 @router.patch("/repair-requests/{request_id}/status", response_model=RepairRequestDetail)
@@ -371,24 +491,77 @@ def sync_repair_request_tracker(
     _: User = Depends(require_admin_or_sysadmin),
 ) -> TrackerSyncResponse:
     repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
+    if not sync_tracker_issue_and_attachments(db, repair_request):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="tracker_unavailable",
+        ) from None
+    db.refresh(repair_request)
+    notify_repair_request_updated(repair_request, source="api")
+
+    return TrackerSyncResponse(
+        tracker_ticket_id=repair_request.tracker_ticket_id or "",
+        tracker_ticket_key=repair_request.tracker_ticket_key or "",
+        tracker_ticket_url=repair_request.tracker_ticket_url or "",
+        last_sync_at=repair_request.last_sync_at or datetime.now(timezone.utc),
+    )
+
+
+@router.get(
+    "/repair-requests/{request_id}/attachments",
+    response_model=TrackerAttachmentList,
+)
+def list_repair_request_attachments(
+    request_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_or_sysadmin),
+) -> TrackerAttachmentList:
+    repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
+    if not issue_ref_for(repair_request):
+        return TrackerAttachmentList(items=[])
     try:
-        result = sync_repair_request_to_tracker(repair_request)
+        rows = list_issue_attachments(repair_request)
     except TrackerUnavailableError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="tracker_unavailable",
         ) from None
+    items = [
+        TrackerAttachmentItem(
+            id=row.id,
+            name=row.name,
+            kind=tracker_attachment_kind(row.mimetype, row.name),
+            mimetype=row.mimetype,
+            size=row.size,
+            has_thumbnail=bool(row.thumbnail_url),
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
+    return TrackerAttachmentList(items=items)
 
-    repair_request.tracker_ticket_id = result.ticket_id
-    repair_request.tracker_ticket_key = result.ticket_key
-    repair_request.tracker_ticket_url = result.ticket_url
-    repair_request.last_sync_at = result.synced_at
-    db.commit()
-    db.refresh(repair_request)
 
-    return TrackerSyncResponse(
-        tracker_ticket_id=result.ticket_id,
-        tracker_ticket_key=result.ticket_key,
-        tracker_ticket_url=result.ticket_url,
-        last_sync_at=result.synced_at,
-    )
+@router.get("/repair-requests/{request_id}/attachments/{attachment_id}/content")
+def get_repair_request_attachment_content(
+    request_id: UUID,
+    attachment_id: str,
+    variant: Literal["content", "thumbnail"] = Query(default="content"),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin_or_sysadmin),
+) -> Response:
+    repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
+    try:
+        data, content_type = fetch_attachment_content(
+            repair_request,
+            attachment_id,
+            variant=variant,
+        )
+    except TrackerUnavailableError as exc:
+        if "not_found" in exc.message:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="attachment_not_found") from None
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="tracker_unavailable",
+        ) from None
+    media = (content_type or "application/octet-stream").split(";")[0]
+    return Response(content=data, media_type=media)

@@ -11,6 +11,7 @@ type NewRequestPayload = {
     requesterName: string;
     description: string;
     syncToTracker?: boolean;
+    files?: File[];
 };
 
 type AppDataContextValue = {
@@ -93,6 +94,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             requesterName: payload.requesterName,
             description: payload.description,
             syncToTracker: payload.syncToTracker,
+            files: payload.files,
         });
         await refresh();
     }, [refresh]);

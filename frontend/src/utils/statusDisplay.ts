@@ -13,8 +13,8 @@ export function repairRequestStatusLabel(status: RepairRequest['status']): strin
 
 /**
  * Второй бейдж рядом со статусом заявки (не путать с основным «В работе» / «Закрыта»):
- * - closed → «Решён»
- * - in_progress и takenBySysadmin → «Забрал сисадмин»
+ * - closed - «Решён»
+ * - in_progress и takenBySysadmin - «Забрал сисадмин»
  */
 export function repairRequestWorkflowBubble(
     status: RepairRequest['status'],

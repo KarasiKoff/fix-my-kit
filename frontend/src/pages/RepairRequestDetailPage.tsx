@@ -10,6 +10,7 @@ import {
     publishRepairRequest,
     syncRepairRequestTracker,
 } from '../api/repairRequests';
+import { RepairAttachmentsModal } from '../components/RepairAttachmentsModal';
 import { Device } from '../types/device';
 import { RepairRequestDetail } from '../types/repairRequest';
 import { useToast } from '../context/ToastContext';
@@ -23,7 +24,6 @@ import { formatApiError } from '../utils/formatApiError';
 import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
 import { fetchUserListItemById } from '../api/users';
 import { useRepairRequestSse } from '../hooks/useRepairRequestSse';
-
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
     if (s === 'new') {
         return 'open';
@@ -40,6 +40,8 @@ export function RepairRequestDetailPage() {
     const [loading, setLoading] = useState(true);
     const [closeNote, setCloseNote] = useState('');
     const [closedByDbLabel, setClosedByDbLabel] = useState<string | null>(null);
+    const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+    const [syncing, setSyncing] = useState(false);
 
     const reload = useCallback(
         async (opts?: { silent?: boolean }) => {
@@ -130,15 +132,18 @@ export function RepairRequestDetailPage() {
     }, [request, noteParts.closedFromMeta]);
 
     async function trySync() {
-        if (!id) {
+        if (!id || syncing) {
             return;
         }
+        setSyncing(true);
         try {
             await syncRepairRequestTracker(id);
             showSuccess('Синхронизация с Трекером выполнена');
             await reload();
         } catch (err) {
             showError(formatApiError(err));
+        } finally {
+            setSyncing(false);
         }
     }
 
@@ -345,6 +350,32 @@ export function RepairRequestDetailPage() {
                         <p className="request-description-block">{request.description}</p>
                     </li>
                 </ul>
+
+                <section className="repair-detail-attachments card-inset">
+                    <h3 className="repair-detail-attachments__title">Вложения</h3>
+                    {request.hasAttachments ? (
+                        <p className="repair-detail-attachments__meta">
+                            Файлов: {request.attachmentsCount ?? 0}
+                            {request.attachmentsSyncStatus === 'complete'
+                                ? ' · все в Трекере'
+                                : request.attachmentsSyncStatus === 'partial'
+                                  ? ' · часть ещё загружается в Трекер'
+                                  : ' · ожидают загрузки в Трекер'}
+                        </p>
+                    ) : (
+                        <p className="repair-detail-attachments__meta">Файлы не прикреплялись.</p>
+                    )}
+                    {isRepairRequestSynced(request) ? (
+                        <button type="button" className="btn-ghost btn-compact" onClick={() => setAttachmentsOpen(true)}>
+                            Просмотреть вложения в Трекере
+                        </button>
+                    ) : request.hasAttachments ? (
+                        <p className="repair-detail-attachments__hint">
+                            Просмотр доступен после синхронизации с Трекером. Файлы можно прикрепить только при создании заявки.
+                        </p>
+                    ) : null}
+                </section>
+
                 <div className="repair-detail-tracker-actions">
                     <div className="repair-detail-tracker-footer repair-detail-tracker-footer--stacked">
                         {trackerHref ? (
@@ -370,9 +401,10 @@ export function RepairRequestDetailPage() {
                             <button
                                 type="button"
                                 className="repair-tracker-footer-btn repair-tracker-footer-btn--filled"
+                                disabled={syncing}
                                 onClick={() => void trySync()}
                             >
-                                Синхронизировать с Трекером
+                                {syncing ? 'Синхронизация…' : 'Синхронизировать с Трекером'}
                             </button>
                         ) : null}
                     </div>
@@ -411,6 +443,14 @@ export function RepairRequestDetailPage() {
                         </div>
                     </div>
                 </section>
+            ) : null}
+
+            {id ? (
+                <RepairAttachmentsModal
+                    requestId={id}
+                    open={attachmentsOpen}
+                    onClose={() => setAttachmentsOpen(false)}
+                />
             ) : null}
         </main>
     );

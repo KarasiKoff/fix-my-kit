@@ -3,7 +3,7 @@ import type { QrSheetSettings } from '../types/qrSheetSettings';
 export const PAGE_W_MM = 210;
 export const PAGE_H_MM = 297;
 
-/** Высота одной строки подписи в мм (pt → мм с запасом по межстрочному). */
+/** Высота одной строки подписи в мм (pt - мм с запасом по межстрочному). */
 export function labelTextHeightMm(fontPt: number): number {
     return fontPt * (25.4 / 72) * 1.25;
 }

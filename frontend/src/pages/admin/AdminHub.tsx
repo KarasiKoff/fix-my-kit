@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { SVGProps } from 'react';
+import { runAttachmentCleanup } from '../../api/repairRequestAttachments';
+import { useToast } from '../../context/ToastContext';
+import { formatApiError } from '../../utils/formatApiError';
 import {
     IconHubCategories,
     IconHubDevice,
@@ -59,7 +62,26 @@ function HubIcon({ Icon, iconClass }: { Icon: React.ComponentType<SVGProps<SVGSV
 
 export function AdminHub() {
     const { user } = useAuth();
+    const { showSuccess, showError } = useToast();
     const isAdmin = user?.role === 'admin';
+    const [cleanupLoading, setCleanupLoading] = useState(false);
+
+    async function handleAttachmentCleanup() {
+        if (!window.confirm('Удалить осиротевшие файлы и pending старше 30 дней?')) {
+            return;
+        }
+        setCleanupLoading(true);
+        try {
+            const result = await runAttachmentCleanup();
+            showSuccess(
+                `Очистка: папок-сирот ${result.orphan_dirs_removed}, устаревших файлов ${result.stale_files_removed}, пустых каталогов ${result.empty_dirs_removed}`,
+            );
+        } catch (err) {
+            showError(formatApiError(err));
+        } finally {
+            setCleanupLoading(false);
+        }
+    }
 
     return (
         <main className="page page--wide page--admin-dashboard">
@@ -108,6 +130,21 @@ export function AdminHub() {
             </section>
 
             <AdminHubStats />
+
+            <section className="card card--hub">
+                <h3 className="card-heading">Обслуживание</h3>
+                <p className="admin-hub-card-desc">
+                    Удаление временных вложений без заявки и файлов, не синхронизированных с Трекером более 30 дней.
+                </p>
+                <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={cleanupLoading}
+                    onClick={() => void handleAttachmentCleanup()}
+                >
+                    {cleanupLoading ? 'Очистка…' : 'Очистить временные вложения'}
+                </button>
+            </section>
         </main>
     );
 }

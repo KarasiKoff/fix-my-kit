@@ -19,7 +19,9 @@ import type { PageSize, RepairRequestSortBy, SortDir } from '../types/listQuery'
 import { formatApiError } from '../utils/formatApiError';
 import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
 import { filtersEqual } from '../utils/filtersMatch';
+import { AttachmentClipIcon } from '../components/AttachmentClipIcon';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
+import { attachmentClipTone } from '../utils/attachmentSyncDisplay';
 import { useRepairRequestSse } from '../hooks/useRepairRequestSse';
 
 type RequestFilters = {
@@ -52,6 +54,7 @@ export function RepairRequests() {
     const [total, setTotal] = useState(0);
     const [fetching, setFetching] = useState(true);
     const [bulkLoading, setBulkLoading] = useState(false);
+    const [syncingId, setSyncingId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<PageSize>(20);
     const [sortBy, setSortBy] = useState<RepairRequestSortBy>(DEFAULT_SORT);
@@ -136,6 +139,10 @@ export function RepairRequests() {
     }
 
     async function handleRowSync(id: string) {
+        if (syncingId) {
+            return;
+        }
+        setSyncingId(id);
         try {
             await syncRepairRequestTracker(id);
             showSuccess('Синхронизировано');
@@ -143,6 +150,8 @@ export function RepairRequests() {
             await load();
         } catch (err) {
             showError(formatApiError(err));
+        } finally {
+            setSyncingId(null);
         }
     }
 
@@ -251,19 +260,21 @@ export function RepairRequests() {
                                     className="table-col-center"
                                 />
                                 <th className="table-col-center">Трекер</th>
+                                <th className="table-col-center" aria-label="Файлы" />
                                 <th className="table-col-center table-col--narrow" />
                             </tr>
                         </thead>
                         <tbody>
                             {items.length === 0 && !fetching ? (
                                 <tr>
-                                    <td colSpan={6}>Заявок пока нет.</td>
+                                    <td colSpan={7}>Заявок пока нет.</td>
                                 </tr>
                             ) : (
                                 items.map((request) => {
                                     const synced = isRepairRequestSynced(request);
                                     const canSync = !synced && request.status !== 'closed';
                                     const trackerHref = yandexTrackerIssueWebHref(request.ticketKey, request.ticketUrl);
+                                    const clipTone = attachmentClipTone(request);
                                     return (
                                         <tr
                                             key={request.id}
@@ -290,6 +301,9 @@ export function RepairRequests() {
                                             <td className="table-col-center">
                                                 {synced ? (request.ticketKey ? request.ticketKey : 'да') : 'нет'}
                                             </td>
+                                            <td className="table-col-center">
+                                                {clipTone ? <AttachmentClipIcon tone={clipTone} /> : null}
+                                            </td>
                                             <td
                                                 className="table-cell-actions table-col-center requests-row-actions-cell"
                                                 onClick={(event) => event.stopPropagation()}
@@ -309,9 +323,10 @@ export function RepairRequests() {
                                                     <button
                                                         type="button"
                                                         className="btn-ghost btn-compact"
+                                                        disabled={syncingId !== null}
                                                         onClick={() => void handleRowSync(request.id)}
                                                     >
-                                                        Синхронизировать
+                                                        {syncingId === request.id ? 'Синхронизация…' : 'Синхронизировать'}
                                                     </button>
                                                 ) : null}
                                             </td>

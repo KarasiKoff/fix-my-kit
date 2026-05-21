@@ -41,6 +41,8 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8001:8000"
+    volumes:
+      - uploads_data_prod:/data/uploads
     networks:
       - fixmykit_prod
 
@@ -63,6 +65,8 @@ services:
 volumes:
   postgres_data_prod:
     name: fixmykit-postgres-data-prod
+  uploads_data_prod:
+    name: fixmykit-uploads-prod
 
 networks:
   fixmykit_prod:

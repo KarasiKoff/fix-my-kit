@@ -59,6 +59,24 @@ class ServerConfig(BaseSettings):
         alias="CORS_ORIGINS",
         description="Разрешённые Origin для CORS, через запятую. Пусто — middleware CORS не подключается.",
     )
+    upload_dir: str = Field(
+        default="data/uploads",
+        alias="UPLOAD_DIR",
+        description="Каталог временных вложений заявок (pending) до загрузки в Tracker.",
+    )
+    attachment_max_bytes: int = Field(
+        default=1024 * 1024 * 1024,
+        alias="ATTACHMENT_MAX_BYTES",
+        description="Максимальный размер одного файла (байты).",
+    )
+    attachment_max_per_request: int = Field(
+        default=10,
+        alias="ATTACHMENT_MAX_PER_REQUEST",
+    )
+    attachment_orphan_max_age_days: int = Field(
+        default=30,
+        alias="ATTACHMENT_ORPHAN_MAX_AGE_DAYS",
+    )
 
 
 class DbConfig(BaseSettings):

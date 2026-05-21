@@ -22,6 +22,10 @@ type RepairRequestApi = {
     closed_by_tracker_display?: string | null;
     device_inventory_number?: string | null;
     device_name?: string | null;
+    has_attachments?: boolean;
+    attachments_sync_status?: 'none' | 'partial' | 'complete';
+    attachments_count?: number;
+    attachments_synced_count?: number;
 };
 
 type PublicRepairSummaryApi = {
@@ -69,7 +73,32 @@ function mapRepairRequest(item: RepairRequestApi): RepairRequest {
         lastSyncedAt: item.last_sync_at ?? undefined,
         deviceInventoryNumber: item.device_inventory_number ?? undefined,
         deviceName: item.device_name ?? undefined,
+        hasAttachments: item.has_attachments ?? false,
+        attachmentsSyncStatus: item.attachments_sync_status ?? 'none',
+        attachmentsCount: item.attachments_count ?? 0,
     };
+}
+
+function buildRepairRequestFormData(payload: {
+    deviceId: string;
+    requesterName: string;
+    description: string;
+    syncToTracker?: boolean;
+    files?: File[];
+}): FormData {
+    const form = new FormData();
+    form.append('device_id', payload.deviceId);
+    form.append('description', payload.description);
+    if (payload.requesterName.trim()) {
+        form.append('applicant_name', payload.requesterName.trim());
+    }
+    if (payload.syncToTracker !== undefined) {
+        form.append('sync_to_tracker', payload.syncToTracker ? 'true' : 'false');
+    }
+    for (const file of payload.files ?? []) {
+        form.append('files', file);
+    }
+    return form;
 }
 
 function mapDetail(item: RepairRequestApi): RepairRequestDetail {
@@ -93,30 +122,49 @@ export async function createRepairRequest(payload: {
     requesterName: string;
     description: string;
     syncToTracker?: boolean;
+    files?: File[];
 }) {
     const token = getStoredAuthToken();
+    const hasFiles = (payload.files?.length ?? 0) > 0;
     if (token) {
-        const response = await apiRequest<RepairRequestApi>('/api/repair-requests', {
-            method: 'POST',
-            body: JSON.stringify({
-                device_id: payload.deviceId,
-                applicant_name: payload.requesterName?.trim() || null,
-                description: payload.description,
-                sync_to_tracker: payload.syncToTracker ?? true,
-            }),
-        });
+        const init = hasFiles
+            ? {
+                  method: 'POST' as const,
+                  body: buildRepairRequestFormData(payload),
+              }
+            : {
+                  method: 'POST' as const,
+                  body: JSON.stringify({
+                      device_id: payload.deviceId,
+                      applicant_name: payload.requesterName?.trim() || null,
+                      description: payload.description,
+                      sync_to_tracker: payload.syncToTracker ?? true,
+                  }),
+              };
+        const response = await apiRequest<RepairRequestApi>('/api/repair-requests', init);
         return mapRepairRequest(response);
     }
 
-    const pub = await apiRequest<{ id: string; status: string }>('/api/public/repair-requests', {
-        method: 'POST',
-        body: JSON.stringify({
-            device_id: payload.deviceId,
-            applicant_name: payload.requesterName,
-            description: payload.description,
-        }),
-        skipAuth: true,
-    });
+    const pubInit = hasFiles
+        ? {
+              method: 'POST' as const,
+              body: buildRepairRequestFormData({
+                  deviceId: payload.deviceId,
+                  requesterName: payload.requesterName,
+                  description: payload.description,
+              }),
+              skipAuth: true as const,
+          }
+        : {
+              method: 'POST' as const,
+              body: JSON.stringify({
+                  device_id: payload.deviceId,
+                  applicant_name: payload.requesterName,
+                  description: payload.description,
+              }),
+              skipAuth: true as const,
+          };
+    const pub = await apiRequest<{ id: string; status: string }>('/api/public/repair-requests', pubInit);
 
     const statusMap: Record<string, RepairRequestApi['status']> = {
         open: 'open',
