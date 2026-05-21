@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
 import { createCategory, deleteCategory, fetchCategories, updateCategory, type CategoryDto } from '../../api/categories';
+import { IconCheck, IconClose, IconEdit, IconTrash } from '../../components/admin/AdminDashboardIcons';
 import { formatApiError } from '../../utils/formatApiError';
 
 export function AdminAddCategory() {
@@ -143,7 +144,7 @@ export function AdminAddCategory() {
                                 </tr>
                             ) : (
                                 sortedRows.map((row) => (
-                                    <tr key={row.id}>
+                                    <tr key={row.id} className={editingId === row.id ? 'admin-table-row--editing' : undefined}>
                                         <td className="table-col-start admin-table-cell--input">
                                             {editingId === row.id ? (
                                                 <input value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!isAdmin} />
@@ -152,26 +153,55 @@ export function AdminAddCategory() {
                                             )}
                                         </td>
                                         <td className="table-col-center">{row.is_active ? 'да' : 'нет'}</td>
-                                        <td className="admin-row-actions table-col-center">
-                                            {editingId === row.id ? (
-                                                <>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
-                                                        Сохранить
-                                                    </button>
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={() => setEditingId(null)}>
-                                                        Отмена
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(row)}>
-                                                        Изменить
-                                                    </button>
-                                                    <button type="button" className="btn-danger btn-compact" disabled={!isAdmin} onClick={() => void removeRow(row)}>
-                                                        Удалить
-                                                    </button>
-                                                </>
-                                            )}
+                                        <td className="table-col-center table-col--narrow">
+                                            <div className="admin-row-actions">
+                                                {editingId === row.id ? (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-icon-accent btn-compact btn-icon"
+                                                            disabled={!isAdmin}
+                                                            onClick={() => void saveEdit()}
+                                                            aria-label="Сохранить"
+                                                            title="Сохранить"
+                                                        >
+                                                            <IconCheck />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-danger btn-compact btn-icon"
+                                                            onClick={() => setEditingId(null)}
+                                                            aria-label="Отмена"
+                                                            title="Отмена"
+                                                        >
+                                                            <IconClose />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-icon-accent btn-compact btn-icon"
+                                                            disabled={!isAdmin}
+                                                            onClick={() => startEdit(row)}
+                                                            aria-label="Изменить"
+                                                            title="Изменить"
+                                                        >
+                                                            <IconEdit />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-danger btn-compact btn-icon"
+                                                            disabled={!isAdmin}
+                                                            onClick={() => void removeRow(row)}
+                                                            aria-label="Удалить"
+                                                            title="Удалить"
+                                                        >
+                                                            <IconTrash />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
