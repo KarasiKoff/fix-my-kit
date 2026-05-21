@@ -3683,6 +3683,8 @@ tbody tr:hover {
   height: 28px;
   object-fit: contain;
   flex-shrink: 0;
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
 }
 
 .category-select__panel {
@@ -3720,24 +3722,152 @@ tbody tr:hover {
   background: var(--nav-active-bg);
 }
 
+/* Поле иконки в форме создания — не растягивается, выравнивается по низу */
 .admin-category-icon-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.82rem;
-  color: var(--text-muted);
+  gap: 0;
+  flex: 0 0 auto;
 }
 
-.admin-category-icon-field input[type='file'] {
-  font-size: 0.8rem;
-  max-width: 100%;
+.admin-category-icon-field .admin-inline-label {
+  margin-bottom: 8px;
 }
 
-.admin-category-row-icon-actions {
+/* Пикер для формы создания — идентичен по высоте обычному input */
+.category-new-icon-btn {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-top: 6px;
+  padding: var(--control-padding-y) var(--control-padding-x);
+  border: 1px dashed var(--border-subtle);
+  border-radius: 11px;
+  background: var(--bg-input);
+  cursor: pointer;
+  font-size: var(--control-font);
+  line-height: 1.4;
+  color: var(--text-muted);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.category-new-icon-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: rgba(123, 150, 255, 0.05);
+}
+
+.category-new-icon-btn--picked {
+  border-style: solid;
+  border-color: rgba(123, 150, 255, 0.4);
+  color: var(--text-primary);
+}
+
+.category-new-icon-btn__icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.category-new-icon-btn__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Поле иконки в режиме редактирования — без иконки */
+.category-edit-icon-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;          /* совпадает с btn-compact */
+  font-size: 0.9rem;            /* совпадает с btn-compact */
+  border: 1px dashed var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  transition: border-color 0.15s ease;
+  white-space: nowrap;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+
+/* С иконкой — кнопка держит те же горизонтальные отступы, иконка заполняет высоту */
+.category-edit-icon-field--has-icon {
+  position: relative;
+  padding: 4px 14px;         /* горизонталь = btn-compact, вертикаль минимальна */
+  border-style: solid;
+  border-color: rgba(123, 150, 255, 0.4);
+  gap: 0;
+  justify-content: center;
+}
+
+/* label-кнопка внутри поля */
+.category-edit-icon-field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+}
+
+.category-edit-icon-field__label:hover {
+  color: var(--text-primary);
+}
+
+/* Иконка заполняет всю доступную высоту кнопки */
+.category-edit-icon-field--has-icon .category-edit-icon-field__label {
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-edit-icon-field--has-icon .category-edit-icon-field__label img {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  max-height: 32px;
+}
+
+/* ✕ — маленький кружок в правом верхнем углу */
+.category-edit-icon-field__remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: var(--danger);
+  color: #fff7f7;
+  font-size: 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  min-height: unset;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: background 0.15s ease;
+  z-index: 2;
+}
+
+.category-edit-icon-field__remove:hover {
+  background: #ef4444;
+}
+
+/* Иконка в колонке "Название" таблицы категорий */
+.category-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* —— Device chip (editor + modal) —— */

@@ -11,7 +11,106 @@ import {
     uploadCategoryIcon,
     type CategoryDto,
 } from '../../api/categories';
+import { useCategoryIconSrc } from '../../hooks/useCategoryIconSrc';
 import { formatApiError } from '../../utils/formatApiError';
+
+const ICON_ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml,.svg';
+const ICON_HINT = 'PNG, JPEG, WebP, SVG · до 1 МБ';
+
+function CategoryRowIcon({ id, hasIcon }: { id: string; hasIcon: boolean }) {
+    const src = useCategoryIconSrc(id, hasIcon);
+    return (
+        <img
+            src={src}
+            alt=""
+            draggable={false}
+            style={{ width: 20, height: 20, objectFit: 'contain', flexShrink: 0, opacity: 0.85 }}
+        />
+    );
+}
+
+/** Пикер иконки для формы создания — высота совпадает с обычным input */
+function NewIconPicker({
+    inputRef,
+    fileName,
+    onPick,
+    disabled,
+}: {
+    inputRef: React.RefObject<HTMLInputElement>;
+    fileName: string | null;
+    onPick: (file: File | null) => void;
+    disabled?: boolean;
+}) {
+    return (
+        <label
+            className={`category-new-icon-btn${disabled ? ' row-disabled' : ''}${fileName ? ' category-new-icon-btn--picked' : ''}`}
+            title={ICON_HINT}
+        >
+            <span className="category-new-icon-btn__icon" aria-hidden>
+                {fileName ? '📎' : '🖼'}
+            </span>
+            <span className="category-new-icon-btn__text">{fileName ?? 'Выбрать иконку'}</span>
+            <input
+                ref={inputRef}
+                type="file"
+                accept={ICON_ACCEPT}
+                disabled={disabled}
+                style={{ display: 'none' }}
+                onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+            />
+        </label>
+    );
+}
+
+/** Пикер иконки для режима редактирования — компактный, ✕ в углу */
+function EditIconPicker({
+    categoryId,
+    hasIcon,
+    inputRef,
+    onPick,
+    onRemove,
+    disabled,
+}: {
+    categoryId: string;
+    hasIcon: boolean;
+    inputRef: React.RefObject<HTMLInputElement>;
+    onPick: (files: FileList | null) => void;
+    onRemove: () => void;
+    disabled?: boolean;
+}) {
+    const iconSrc = useCategoryIconSrc(hasIcon ? categoryId : null, hasIcon);
+
+    return (
+        <div className={`category-edit-icon-field${hasIcon ? ' category-edit-icon-field--has-icon' : ''}${disabled ? ' row-disabled' : ''}`}>
+            <label className="category-edit-icon-field__label" title={hasIcon ? 'Нажмите чтобы сменить иконку' : ICON_HINT}>
+                {hasIcon ? (
+                    <img src={iconSrc} alt="иконка категории" draggable={false} />
+                ) : (
+                    <span>🖼 Иконка</span>
+                )}
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept={ICON_ACCEPT}
+                    disabled={disabled}
+                    style={{ display: 'none' }}
+                    onChange={(e) => onPick(e.target.files)}
+                />
+            </label>
+            {hasIcon && !disabled ? (
+                <button
+                    type="button"
+                    className="category-edit-icon-field__remove"
+                    onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                    title="Удалить иконку"
+                    aria-label="Удалить иконку"
+                >
+                    ✕
+                </button>
+            ) : null}
+        </div>
+    );
+}
 
 export function AdminAddCategory() {
     const { showSuccess, showError } = useToast();
@@ -20,12 +119,15 @@ export function AdminAddCategory() {
 
     const [rows, setRows] = useState<CategoryDto[]>([]);
     const [newName, setNewName] = useState('');
+    const [newIconFile, setNewIconFile] = useState<File | null>(null);
     const newIconInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(true);
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
-    const rowIconInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+    const rowIconInputRef = useRef<HTMLInputElement>(null);
+
+    const editingRow = editingId ? rows.find((r) => r.id === editingId) : null;
 
     async function reload() {
         setLoading(true);
@@ -48,13 +150,11 @@ export function AdminAddCategory() {
         if (!isAdmin) return;
         const n = newName.trim();
         if (!n) return;
-        const file = newIconInputRef.current?.files?.[0] ?? null;
         try {
             const created = await createCategory(n);
-            if (file) {
-                await uploadCategoryIcon(created.id, file);
-            }
+            if (newIconFile) await uploadCategoryIcon(created.id, newIconFile);
             setNewName('');
+            setNewIconFile(null);
             if (newIconInputRef.current) newIconInputRef.current.value = '';
             showSuccess('Категория добавлена');
             await reload();
@@ -66,6 +166,11 @@ export function AdminAddCategory() {
     function startEdit(row: CategoryDto) {
         setEditingId(row.id);
         setEditName(row.name);
+    }
+
+    function cancelEdit() {
+        setEditingId(null);
+        if (rowIconInputRef.current) rowIconInputRef.current.value = '';
     }
 
     async function saveEdit() {
@@ -84,9 +189,7 @@ export function AdminAddCategory() {
 
     async function removeRow(row: CategoryDto) {
         if (!isAdmin) return;
-        if (!window.confirm(`Удалить категорию «${row.name}»? У связанных устройств поле категории будет сброшено.`)) {
-            return;
-        }
+        if (!window.confirm(`Удалить категорию «${row.name}»? У связанных устройств поле категории будет сброшено.`)) return;
         try {
             await deleteCategory(row.id);
             if (editingId === row.id) setEditingId(null);
@@ -97,12 +200,11 @@ export function AdminAddCategory() {
         }
     }
 
-    async function onPickRowIcon(categoryId: string, fileList: FileList | null) {
-        if (!isAdmin || !fileList?.[0]) return;
+    async function onPickRowIcon(fileList: FileList | null) {
+        if (!isAdmin || !editingId || !fileList?.[0]) return;
         try {
-            await uploadCategoryIcon(categoryId, fileList[0]);
-            const input = rowIconInputRefs.current[categoryId];
-            if (input) input.value = '';
+            await uploadCategoryIcon(editingId, fileList[0]);
+            if (rowIconInputRef.current) rowIconInputRef.current.value = '';
             showSuccess('Иконка обновлена');
             await reload();
         } catch (err) {
@@ -110,11 +212,11 @@ export function AdminAddCategory() {
         }
     }
 
-    async function onRemoveIcon(categoryId: string) {
-        if (!isAdmin) return;
+    async function onRemoveIcon() {
+        if (!isAdmin || !editingId) return;
         if (!window.confirm('Удалить иконку категории?')) return;
         try {
-            await deleteCategoryIcon(categoryId);
+            await deleteCategoryIcon(editingId);
             showSuccess('Иконка удалена');
             await reload();
         } catch (err) {
@@ -147,10 +249,12 @@ export function AdminAddCategory() {
                     </label>
                     <div className="admin-inline-field admin-category-icon-field">
                         <span className="admin-inline-label">Иконка</span>
-                        <input ref={newIconInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" disabled={!isAdmin} />
-                        <span className="muted-text" style={{ fontSize: '0.75rem' }}>
-                            PNG, JPEG, WebP или SVG, до 1 МБ
-                        </span>
+                        <NewIconPicker
+                            inputRef={newIconInputRef}
+                            fileName={newIconFile?.name ?? null}
+                            onPick={setNewIconFile}
+                            disabled={!isAdmin}
+                        />
                     </div>
                     <div className="admin-inline-actions">
                         <button type="submit" className="btn-primary" disabled={!isAdmin}>
@@ -164,70 +268,82 @@ export function AdminAddCategory() {
                         <thead>
                             <tr>
                                 <th className="table-col-start">Название</th>
-                                <th className="table-col-center">Активна</th>
                                 <th className="table-col-center table-col--narrow">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr className="admin-table-placeholder-row">
-                                    <td colSpan={3}>Загрузка…</td>
+                                    <td colSpan={2}>Загрузка…</td>
                                 </tr>
                             ) : sortedRows.length === 0 ? (
                                 <tr className="admin-table-placeholder-row">
-                                    <td colSpan={3} />
+                                    <td colSpan={2} />
                                 </tr>
                             ) : (
                                 sortedRows.map((row) => (
                                     <tr key={row.id}>
                                         <td className="table-col-start admin-table-cell--input">
                                             {editingId === row.id ? (
-                                                <input value={editName} onChange={(e) => setEditName(e.target.value)} disabled={!isAdmin} />
+                                                <input
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    disabled={!isAdmin}
+                                                    autoFocus
+                                                />
                                             ) : (
-                                                row.name
+                                                <span className="category-name-cell">
+                                                    {row.has_icon && <CategoryRowIcon id={row.id} hasIcon={row.has_icon} />}
+                                                    {row.name}
+                                                </span>
                                             )}
                                         </td>
-                                        <td className="table-col-center">{row.is_active ? 'да' : 'нет'}</td>
                                         <td className="admin-row-actions table-col-center">
                                             {editingId === row.id ? (
                                                 <>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-ghost btn-compact"
+                                                        disabled={!isAdmin}
+                                                        onClick={() => void saveEdit()}
+                                                    >
                                                         Сохранить
                                                     </button>
-                                                    <button type="button" className="btn-ghost btn-compact" onClick={() => setEditingId(null)}>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-ghost btn-compact"
+                                                        onClick={cancelEdit}
+                                                    >
                                                         Отмена
                                                     </button>
+                                                    {isAdmin ? (
+                                                        <EditIconPicker
+                                                            categoryId={editingId}
+                                                            hasIcon={editingRow?.has_icon ?? false}
+                                                            inputRef={rowIconInputRef}
+                                                            onPick={(files) => void onPickRowIcon(files)}
+                                                            onRemove={() => void onRemoveIcon()}
+                                                        />
+                                                    ) : null}
                                                 </>
                                             ) : (
                                                 <>
-                                                    <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(row)}>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-ghost btn-compact"
+                                                        disabled={!isAdmin}
+                                                        onClick={() => startEdit(row)}
+                                                    >
                                                         Изменить
                                                     </button>
-                                                    <button type="button" className="btn-danger btn-compact" disabled={!isAdmin} onClick={() => void removeRow(row)}>
+                                                    <button
+                                                        type="button"
+                                                        className="btn-danger btn-compact"
+                                                        disabled={!isAdmin}
+                                                        onClick={() => void removeRow(row)}
+                                                    >
                                                         Удалить
                                                     </button>
-                                                    {isAdmin ? (
-                                                        <div className="admin-category-row-icon-actions" style={{ justifyContent: 'center' }}>
-                                                            <label className="muted-text" style={{ fontSize: '0.72rem', cursor: 'pointer' }}>
-                                                                Иконка
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"
-                                                                    className="admin-category-row-file"
-                                                                    ref={(el) => {
-                                                                        rowIconInputRefs.current[row.id] = el;
-                                                                    }}
-                                                                    onChange={(e) => void onPickRowIcon(row.id, e.target.files)}
-                                                                    style={{ display: 'block', marginTop: 4, maxWidth: 140 }}
-                                                                />
-                                                            </label>
-                                                            {row.has_icon ? (
-                                                                <button type="button" className="btn-ghost btn-compact" onClick={() => void onRemoveIcon(row.id)}>
-                                                                    Убрать иконку
-                                                                </button>
-                                                            ) : null}
-                                                        </div>
-                                                    ) : null}
                                                 </>
                                             )}
                                         </td>
