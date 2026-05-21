@@ -161,10 +161,24 @@ def sync_pending_attachments_to_tracker(
         uploaded.append(item)
         ok += 1
 
-    recompute_attachment_fields(repair_request)
     if remove_from_disk:
         finalize_pending_deletions(uploaded, repair_request.id)
+        recompute_attachment_fields(repair_request)
     return PendingSyncResult(uploaded=uploaded, ok=ok, failed=failed)
+
+
+def apply_attachment_state_after_sync(
+    repair_request: RepairRequest,
+    uploaded: list[PendingAttachment],
+) -> None:
+    """Удаляет загруженные файлы с диска и пересчитывает счётчики (после commit тикета)."""
+    finalize_pending_deletions(uploaded, repair_request.id)
+    recompute_attachment_fields(repair_request)
+
+
+def refresh_attachment_fields_from_disk(repair_request: RepairRequest) -> None:
+    """Пересчёт по фактическому числу файлов на диске (чинит устаревшие значения в БД)."""
+    recompute_attachment_fields(repair_request)
 
 
 def sync_tracker_issue_and_attachments(db: Session, repair_request: RepairRequest) -> bool:
@@ -183,11 +197,10 @@ def sync_tracker_issue_and_attachments(db: Session, repair_request: RepairReques
 
     if count_pending(repair_request.id) > 0:
         sync_result = sync_pending_attachments_to_tracker(repair_request, remove_from_disk=False)
-        db.commit()
-        finalize_pending_deletions(sync_result.uploaded, repair_request.id)
+        apply_attachment_state_after_sync(repair_request, sync_result.uploaded)
     else:
-        recompute_attachment_fields(repair_request)
-        db.commit()
+        refresh_attachment_fields_from_disk(repair_request)
+    db.commit()
     return True
 
 

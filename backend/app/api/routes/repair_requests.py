@@ -35,6 +35,7 @@ from backend.app.services.repair_request_attachment_service import (
     AttachmentValidationError,
     http_error_from_attachment_exc,
     recompute_attachment_fields,
+    refresh_attachment_fields_from_disk,
     sync_tracker_issue_and_attachments,
     tracker_attachment_kind,
     validate_and_store_uploads,
@@ -373,6 +374,8 @@ def get_repair_request(
     )
     if repair_request is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="repair_request_not_found")
+    refresh_attachment_fields_from_disk(repair_request)
+    db.commit()
     return _repair_request_list_item(repair_request)
 
 
