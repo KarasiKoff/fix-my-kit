@@ -23,10 +23,46 @@
   --control-padding-x: 14px;
   --control-min-height: calc(2 * var(--control-padding-y) + 1.4rem + 2px);
   --admin-actions-col-width: 300px;
+  --scrollbar-size: 10px;
+  --scrollbar-track: var(--bg-input);
+  --scrollbar-thumb: #3d444d;
+  --scrollbar-thumb-hover: var(--accent);
+  --scrollbar-thumb-active: var(--accent-hover);
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+  min-height: 40px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-active);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
 }
 
 body {
