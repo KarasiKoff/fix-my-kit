@@ -13,12 +13,14 @@ export function RepairRequestForm({
     initialDeviceId,
     deviceSelectDisabled = false,
     nameRequired = false,
+    childrenAfterDescription,
     onSubmit,
 }: {
     devices: Device[];
     initialDeviceId?: string;
     deviceSelectDisabled?: boolean;
     nameRequired?: boolean;
+    childrenAfterDescription?: React.ReactNode;
     onSubmit: (data: FormData) => void | Promise<void>;
 }) {
     const [deviceId, setDeviceId] = useState(initialDeviceId ?? devices[0]?.id ?? '');
@@ -95,6 +97,7 @@ export function RepairRequestForm({
                 Описание
                 <textarea value={description} onChange={(e) => setDescription(e.target.value)} required />
             </label>
+            {childrenAfterDescription}
             <div className="repair-request-form-actions">
                 <button
                     type="submit"

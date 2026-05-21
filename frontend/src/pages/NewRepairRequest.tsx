@@ -214,14 +214,15 @@ export function NewRepairRequest() {
                     </label>
                 ) : null}
 
-                <AttachmentUploader files={attachmentDrafts} onChange={setAttachmentDrafts} />
-
                 <RepairRequestForm
                     devices={filteredDevices}
                     initialDeviceId={preselectedDeviceId}
                     deviceSelectDisabled={lockedGuest}
                     nameRequired={!isAuthenticated}
                     onSubmit={handleSubmit}
+                    childrenAfterDescription={
+                        <AttachmentUploader files={attachmentDrafts} onChange={setAttachmentDrafts} />
+                    }
                 />
 
                 {!isAuthenticated && guestDone ? (
