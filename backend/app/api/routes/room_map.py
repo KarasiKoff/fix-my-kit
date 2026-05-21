@@ -25,6 +25,7 @@ def _get_audience_or_404(db: Session, audience_id: int) -> Audience:
 
 
 def _build_map_response(audience_id: int, db: Session) -> RoomMapResponse:
+    audience = _get_audience_or_404(db, audience_id)
     rows = (
         db.query(RoomDevicePosition, DeviceModel, CategoryModel)
         .join(DeviceModel, RoomDevicePosition.device_id == DeviceModel.id)
@@ -41,6 +42,8 @@ def _build_map_response(audience_id: int, db: Session) -> RoomMapResponse:
             device_id=pos.device_id,
             x_pct=pos.x_pct,
             y_pct=pos.y_pct,
+            grid_col=pos.grid_col,
+            grid_row=pos.grid_row,
             device_name=dev.name,
             inventory_number=dev.inventory_number,
             repair_status=dev.repair_status.value,
@@ -49,7 +52,14 @@ def _build_map_response(audience_id: int, db: Session) -> RoomMapResponse:
         )
         for pos, dev, cat in rows
     ]
-    return RoomMapResponse(audience_id=audience_id, positions=positions)
+    door_edge = audience.map_door_edge if audience.map_door_edge in ("top", "bottom") else "bottom"
+    return RoomMapResponse(
+        audience_id=audience_id,
+        grid_cols=audience.map_grid_cols,
+        grid_rows=audience.map_grid_rows,
+        door_edge=door_edge,
+        positions=positions,
+    )
 
 
 @router.get("/{audience_id}/map", response_model=RoomMapResponse)
@@ -111,7 +121,10 @@ def save_room_map(
     db: Session = Depends(get_db),
     _=Depends(require_admin_only),
 ) -> RoomMapResponse:
-    _get_audience_or_404(db, audience_id)
+    audience = _get_audience_or_404(db, audience_id)
+    audience.map_grid_cols = payload.grid_cols
+    audience.map_grid_rows = payload.grid_rows
+    audience.map_door_edge = payload.door_edge
 
     submitted_ids = {p.device_id for p in payload.positions}
     if submitted_ids:
@@ -140,6 +153,8 @@ def save_room_map(
                 device_id=p.device_id,
                 x_pct=p.x_pct,
                 y_pct=p.y_pct,
+                grid_col=p.grid_col,
+                grid_row=p.grid_row,
             )
         )
     db.commit()

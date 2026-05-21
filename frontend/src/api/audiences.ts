@@ -1,5 +1,5 @@
 import { apiRequest } from './client';
-import type { DeviceOnMap, RoomDeviceListItem, RoomMapData } from '../types/roomMap';
+import type { DeviceOnMap, MapDoorEdge, RoomDeviceListItem, RoomMapData } from '../types/roomMap';
 
 export type AudienceDto = {
     id: number;
@@ -36,6 +36,8 @@ type DeviceOnMapApi = {
     device_id: string;
     x_pct: number;
     y_pct: number;
+    grid_col?: number | null;
+    grid_row?: number | null;
     device_name: string;
     inventory_number: string;
     repair_status: string;
@@ -48,6 +50,8 @@ function mapDeviceOnMap(item: DeviceOnMapApi): DeviceOnMap {
         deviceId: item.device_id,
         xPct: item.x_pct,
         yPct: item.y_pct,
+        gridCol: item.grid_col ?? null,
+        gridRow: item.grid_row ?? null,
         deviceName: item.device_name,
         inventoryNumber: item.inventory_number,
         repairStatus: item.repair_status as DeviceOnMap['repairStatus'],
@@ -56,22 +60,60 @@ function mapDeviceOnMap(item: DeviceOnMapApi): DeviceOnMap {
     };
 }
 
+function parseDoorEdge(value: string | undefined): MapDoorEdge {
+    return value === 'top' ? 'top' : 'bottom';
+}
+
 export async function fetchRoomMap(audienceId: number): Promise<RoomMapData> {
-    const data = await apiRequest<{ audience_id: number; positions: DeviceOnMapApi[] }>(
-        `/api/audiences/${audienceId}/map`,
-    );
-    return { audienceId: data.audience_id, positions: data.positions.map(mapDeviceOnMap) };
+    const data = await apiRequest<{
+        audience_id: number;
+        grid_cols: number;
+        grid_rows: number;
+        door_edge?: string;
+        positions: DeviceOnMapApi[];
+    }>(`/api/audiences/${audienceId}/map`);
+    return {
+        audienceId: data.audience_id,
+        gridCols: data.grid_cols ?? 4,
+        gridRows: data.grid_rows ?? 4,
+        doorEdge: parseDoorEdge(data.door_edge),
+        positions: data.positions.map(mapDeviceOnMap),
+    };
 }
 
 export async function saveRoomMap(
     audienceId: number,
-    positions: Array<{ device_id: string; x_pct: number; y_pct: number }>,
+    positions: Array<{
+        device_id: string;
+        x_pct: number;
+        y_pct: number;
+        grid_col: number;
+        grid_row: number;
+    }>,
+    grid: { gridCols: number; gridRows: number; doorEdge: MapDoorEdge },
 ): Promise<RoomMapData> {
-    const data = await apiRequest<{ audience_id: number; positions: DeviceOnMapApi[] }>(
-        `/api/audiences/${audienceId}/map`,
-        { method: 'PUT', body: JSON.stringify({ positions }) },
-    );
-    return { audienceId: data.audience_id, positions: data.positions.map(mapDeviceOnMap) };
+    const data = await apiRequest<{
+        audience_id: number;
+        grid_cols: number;
+        grid_rows: number;
+        door_edge?: string;
+        positions: DeviceOnMapApi[];
+    }>(`/api/audiences/${audienceId}/map`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            positions,
+            grid_cols: grid.gridCols,
+            grid_rows: grid.gridRows,
+            door_edge: grid.doorEdge,
+        }),
+    });
+    return {
+        audienceId: data.audience_id,
+        gridCols: data.grid_cols ?? 4,
+        gridRows: data.grid_rows ?? 4,
+        doorEdge: parseDoorEdge(data.door_edge),
+        positions: data.positions.map(mapDeviceOnMap),
+    };
 }
 
 export async function fetchAudienceDevices(audienceId: number): Promise<RoomDeviceListItem[]> {

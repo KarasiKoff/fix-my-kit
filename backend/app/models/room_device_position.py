@@ -11,6 +11,8 @@ class RoomDevicePosition(Base):
     device_id = Column(Uuid, ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
     x_pct = Column(Float, nullable=False)
     y_pct = Column(Float, nullable=False)
+    grid_col = Column(Integer, nullable=True)
+    grid_row = Column(Integer, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("audience_id", "device_id", name="uq_room_device_position"),

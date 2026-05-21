@@ -8,3 +8,6 @@ class Audience(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
+    map_grid_cols = Column(Integer, nullable=False, default=4)
+    map_grid_rows = Column(Integer, nullable=False, default=4)
+    map_door_edge = Column(String(8), nullable=False, default="bottom")

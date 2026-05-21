@@ -2,6 +2,8 @@ export type DeviceOnMap = {
     deviceId: string;
     xPct: number;
     yPct: number;
+    gridCol?: number | null;
+    gridRow?: number | null;
     deviceName: string;
     inventoryNumber: string;
     repairStatus: 'not_in_repair' | 'in_repair';
@@ -9,8 +11,13 @@ export type DeviceOnMap = {
     categoryHasIcon?: boolean;
 };
 
+export type MapDoorEdge = 'top' | 'bottom';
+
 export type RoomMapData = {
     audienceId: number;
+    gridCols: number;
+    gridRows: number;
+    doorEdge: MapDoorEdge;
     positions: DeviceOnMap[];
 };
 

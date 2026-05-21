@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchRoomMap } from '../api/audiences';
+import { useFixedMapCanvas } from '../hooks/useFixedMapCanvas';
+import { useRoomMapDisplay } from '../hooks/useRoomMapDisplay';
+import { MapCanvasStack } from './MapCanvasStack';
 import { MapDeviceChip } from './MapDeviceChip';
 import { formatApiError } from '../utils/formatApiError';
-import type { DeviceOnMap } from '../types/roomMap';
+import type { MapDoorEdge } from '../types/roomMap';
 
 type Props = {
     audienceId: number;
@@ -12,20 +15,29 @@ type Props = {
 };
 
 export function RoomMapModal({ audienceId, audienceName, highlightedDeviceId, onClose }: Props) {
-    const [positions, setPositions] = useState<DeviceOnMap[]>([]);
+    const [positions, setPositions] = useState<Awaited<ReturnType<typeof fetchRoomMap>>['positions']>([]);
+    const [gridCols, setGridCols] = useState(4);
+    const [gridRows, setGridRows] = useState(4);
+    const [doorEdge, setDoorEdge] = useState<MapDoorEdge>('bottom');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
+    const { canvasStyle, wrapStyle } = useFixedMapCanvas(gridCols, gridRows);
+    const { displayDevices } = useRoomMapDisplay(gridCols, gridRows, positions);
 
     useEffect(() => {
         setLoading(true);
         fetchRoomMap(audienceId)
-            .then((data) => setPositions(data.positions))
+            .then((data) => {
+                setPositions(data.positions);
+                setGridCols(data.gridCols);
+                setGridRows(data.gridRows);
+                setDoorEdge(data.doorEdge);
+            })
             .catch((err: unknown) => setError(formatApiError(err)))
             .finally(() => setLoading(false));
     }, [audienceId]);
 
-    // Закрытие по Escape
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
             if (e.key === 'Escape') onClose();
@@ -66,9 +78,16 @@ export function RoomMapModal({ audienceId, audienceName, highlightedDeviceId, on
                 ) : positions.length === 0 ? (
                     <p className="muted-text">Карта не настроена для этого кабинета.</p>
                 ) : (
-                    <div className="map-canvas map-canvas--map-light map-canvas--editor-fill" style={{ pointerEvents: 'none' }}>
-                        <div className="map-canvas-inner">
-                            {positions.map((p) => (
+                    <div className="map-canvas-slot map-canvas-slot--modal">
+                        <MapCanvasStack
+                            doorEdge={doorEdge}
+                            gridCols={gridCols}
+                            gridRows={gridRows}
+                            canvasStyle={{ pointerEvents: 'none', ...canvasStyle }}
+                            wrapStyle={wrapStyle}
+                            canvasClassName="map-canvas map-canvas--map-light map-canvas--editor-fill map-canvas--fixed-grid map-canvas--modal-view"
+                        >
+                            {displayDevices.map((p) => (
                                 <MapDeviceChip
                                     key={p.deviceId}
                                     device={p}
@@ -78,7 +97,7 @@ export function RoomMapModal({ audienceId, audienceName, highlightedDeviceId, on
                                     cursor="default"
                                 />
                             ))}
-                        </div>
+                        </MapCanvasStack>
                     </div>
                 )}
             </div>

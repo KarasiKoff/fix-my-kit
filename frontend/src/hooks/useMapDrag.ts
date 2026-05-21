@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { MAP_CHIP_SIZE_PX } from '../utils/mapChipConstants';
 import type { DeviceOnMap } from '../types/roomMap';
 import {
     cellCenterToPct,
+    computeFixedGridLayout,
     computeGridLayout,
     isCellOccupiedByOther,
     nearestCellFromClient,
@@ -21,10 +23,9 @@ export type UseMapDragOptions = {
     initialPositions: DeviceOnMap[];
     gridCols: number;
     gridRows: number;
-    chipSizePx: number;
 };
 
-export function useMapDrag({ initialPositions, gridCols, gridRows, chipSizePx }: UseMapDragOptions) {
+export function useMapDrag({ initialPositions, gridCols, gridRows }: UseMapDragOptions) {
     const [positions, setPositions] = useState<DraftPositions>(() =>
         Object.fromEntries(
             initialPositions.map((p) => [p.deviceId, { xPct: p.xPct, yPct: p.yPct }]),
@@ -36,23 +37,18 @@ export function useMapDrag({ initialPositions, gridCols, gridRows, chipSizePx }:
     const positionsRef = useRef(positions);
     positionsRef.current = positions;
 
-    const gridRef = useRef({ cols: gridCols, rows: gridRows, chip: chipSizePx });
-    gridRef.current = { cols: gridCols, rows: gridRows, chip: chipSizePx };
+    const gridRef = useRef({ cols: gridCols, rows: gridRows });
+    gridRef.current = { cols: gridCols, rows: gridRows };
 
     const [draggingDeviceId, setDraggingDeviceId] = useState<string | null>(null);
 
     const readLayout = useCallback(() => {
         const el = canvasRef.current;
-        if (!el) return null;
-        const { cols, rows, chip: chipFromState } = gridRef.current;
-        const probe = el.querySelector<HTMLElement>('.map-chip-size-probe');
-        let chip = chipFromState;
-        if (chip <= 0 && probe && probe.offsetWidth > 0) {
-            chip = probe.offsetWidth;
-        }
-        if (chip <= 0) return null;
+        const { cols, rows } = gridRef.current;
+        const fixed = computeFixedGridLayout(MAP_CHIP_SIZE_PX, cols, rows);
+        if (!el || !fixed) return fixed;
         const r = el.getBoundingClientRect();
-        return computeGridLayout(r.width, r.height, chip, cols, rows);
+        return computeGridLayout(r.width, r.height, MAP_CHIP_SIZE_PX, cols, rows) ?? fixed;
     }, []);
 
     const onChipMouseDown = useCallback(
@@ -140,13 +136,9 @@ export function useMapDrag({ initialPositions, gridCols, gridRows, chipSizePx }:
         };
     }, [draggingDeviceId, readLayout]);
 
-    const onCanvasMouseMove = useCallback(() => {
-        /* перетаскивание обрабатывается на window */
-    }, []);
+    const onCanvasMouseMove = useCallback(() => {}, []);
 
-    const onCanvasMouseUp = useCallback(() => {
-        /* отпускание обрабатывается на window */
-    }, []);
+    const onCanvasMouseUp = useCallback(() => {}, []);
 
     const dropDevice = useCallback(
         (deviceId: string, e: React.DragEvent<HTMLDivElement>): { ok: boolean } => {

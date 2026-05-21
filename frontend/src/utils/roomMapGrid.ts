@@ -1,3 +1,5 @@
+import { MAP_CHIP_SIZE_PX } from './mapChipConstants';
+
 export type GridLayout = {
     innerW: number;
     innerH: number;
@@ -9,6 +11,19 @@ export type GridLayout = {
     oy: number;
 };
 
+/** Сетка без масштабирования: холст = cols×chip × rows×chip */
+export function computeFixedGridLayout(
+    chip: number = MAP_CHIP_SIZE_PX,
+    cols: number,
+    rows: number,
+): GridLayout | null {
+    if (chip <= 0 || cols < 1 || rows < 1) return null;
+    const innerW = cols * chip;
+    const innerH = rows * chip;
+    return { innerW, innerH, chip, cols, rows, K: 1, ox: 0, oy: 0 };
+}
+
+/** Совместимость: если размеры холста совпадают с сеткой — та же раскладка */
 export function computeGridLayout(
     innerW: number,
     innerH: number,
@@ -16,13 +31,9 @@ export function computeGridLayout(
     cols: number,
     rows: number,
 ): GridLayout | null {
-    if (innerW <= 0 || innerH <= 0 || chip <= 0 || cols < 1 || rows < 1) return null;
-    const gridW = cols * chip;
-    const gridH = rows * chip;
-    const K = Math.min(1, innerW / gridW, innerH / gridH);
-    const ox = (innerW - gridW * K) / 2;
-    const oy = (innerH - gridH * K) / 2;
-    return { innerW, innerH, chip, cols, rows, K, ox, oy };
+    const layout = computeFixedGridLayout(chip, cols, rows);
+    if (!layout) return null;
+    return { ...layout, innerW, innerH };
 }
 
 export function cellCenterToPct(layout: GridLayout, ci: number, cj: number): { xPct: number; yPct: number } {
