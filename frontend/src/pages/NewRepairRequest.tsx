@@ -214,10 +214,6 @@ export function NewRepairRequest() {
                     </label>
                 ) : null}
 
-                {isAuthenticated ? (
-                    <AttachmentUploader files={attachmentDrafts} onChange={setAttachmentDrafts} />
-                ) : null}
-
                 <RepairRequestForm
                     devices={filteredDevices}
                     initialDeviceId={preselectedDeviceId}
@@ -225,9 +221,7 @@ export function NewRepairRequest() {
                     nameRequired={!isAuthenticated}
                     onSubmit={handleSubmit}
                     childrenAfterDescription={
-                        !isAuthenticated ? (
-                            <AttachmentUploader files={attachmentDrafts} onChange={setAttachmentDrafts} />
-                        ) : undefined
+                        <AttachmentUploader files={attachmentDrafts} onChange={setAttachmentDrafts} />
                     }
                 />
 
