@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
@@ -35,7 +35,6 @@ from backend.app.services.repair_request_attachment_service import (
     AttachmentValidationError,
     http_error_from_attachment_exc,
     recompute_attachment_fields,
-    sync_pending_attachments_to_tracker,
     sync_tracker_issue_and_attachments,
     tracker_attachment_kind,
     validate_and_store_uploads,
@@ -47,7 +46,6 @@ from backend.app.services.tracker_service import (
     fetch_attachment_content,
     issue_ref_for,
     list_issue_attachments,
-    sync_repair_request_to_tracker,
 )
 
 router = APIRouter(prefix="/api", tags=["repair-requests"])
@@ -490,71 +488,20 @@ def sync_repair_request_tracker(
     _: User = Depends(require_admin_or_sysadmin),
 ) -> TrackerSyncResponse:
     repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
-    try:
-        result = sync_repair_request_to_tracker(repair_request)
-    except TrackerUnavailableError:
+    if not sync_tracker_issue_and_attachments(db, repair_request):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="tracker_unavailable",
         ) from None
-
-    repair_request.tracker_ticket_id = result.ticket_id
-    repair_request.tracker_ticket_key = result.ticket_key
-    repair_request.tracker_ticket_url = result.ticket_url
-    repair_request.last_sync_at = result.synced_at
-    db.flush()
-    sync_pending_attachments_to_tracker(repair_request)
-    db.commit()
-    db.refresh(repair_request)
-
-    return TrackerSyncResponse(
-        tracker_ticket_id=result.ticket_id,
-        tracker_ticket_key=result.ticket_key,
-        tracker_ticket_url=result.ticket_url,
-        last_sync_at=result.synced_at,
-    )
-
-
-@router.post(
-    "/repair-requests/{request_id}/attachments",
-    response_model=RepairRequestResponse,
-    status_code=status.HTTP_200_OK,
-)
-async def add_repair_request_attachments(
-    request_id: UUID,
-    files: list[UploadFile] = File(default=[]),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_admin_or_sysadmin),
-) -> RepairRequestResponse:
-    repair_request = get_repair_request_or_404(db, request_id, for_tracker=True)
-    uploads = [f for f in files if f.filename]
-    if not uploads:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="files_required")
-    try:
-        await validate_and_store_uploads(repair_request, uploads)
-        db.commit()
-    except (AttachmentLimitError, AttachmentValidationError) as exc:
-        db.rollback()
-        raise http_error_from_attachment_exc(exc) from exc
-
-    if issue_ref_for(repair_request):
-        try:
-            sync_pending_attachments_to_tracker(repair_request)
-            db.commit()
-        except TrackerUnavailableError:
-            recompute_attachment_fields(repair_request)
-            db.commit()
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="tracker_unavailable",
-            ) from None
-    else:
-        recompute_attachment_fields(repair_request)
-        db.commit()
-
     db.refresh(repair_request)
     notify_repair_request_updated(repair_request, source="api")
-    return _repair_request_list_item(repair_request)
+
+    return TrackerSyncResponse(
+        tracker_ticket_id=repair_request.tracker_ticket_id or "",
+        tracker_ticket_key=repair_request.tracker_ticket_key or "",
+        tracker_ticket_url=repair_request.tracker_ticket_url or "",
+        last_sync_at=repair_request.last_sync_at or datetime.now(timezone.utc),
+    )
 
 
 @router.get(

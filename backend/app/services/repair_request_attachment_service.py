@@ -50,6 +50,13 @@ class AttachmentCleanupResult:
     empty_dirs_removed: int
 
 
+@dataclass(frozen=True)
+class PendingSyncResult:
+    uploaded: list[PendingAttachment]
+    ok: int
+    failed: int
+
+
 def max_per_request() -> int:
     return settings.server.attachment_max_per_request
 
@@ -122,31 +129,42 @@ async def validate_and_store_uploads(
     return stored
 
 
+def finalize_pending_deletions(uploaded: list[PendingAttachment], request_id: UUID) -> None:
+    """Удаляет с диска только после успешного commit в БД."""
+    for item in uploaded:
+        delete_pending_file(item.path)
+    if count_pending(request_id) == 0:
+        remove_pending_dir(request_id)
+
+
 def sync_pending_attachments_to_tracker(
     repair_request: RepairRequest,
-) -> tuple[int, int]:
-    """Загружает pending-файлы в Tracker. Возвращает (успешно, ошибок)."""
+    *,
+    remove_from_disk: bool = False,
+) -> PendingSyncResult:
+    """Загружает pending-файлы в Tracker. Файлы с диска удаляются только при remove_from_disk=True."""
     ref = issue_ref_for(repair_request)
     if not ref:
-        return 0, count_pending(repair_request.id)
+        pending_left = count_pending(repair_request.id)
+        return PendingSyncResult(uploaded=[], ok=0, failed=pending_left)
 
     ok = 0
     failed = 0
+    uploaded: list[PendingAttachment] = []
     for item in list_pending(repair_request.id):
         try:
             upload_issue_attachment(ref, file_path=item.path, filename=item.original_name)
         except TrackerUnavailableError:
             failed += 1
             continue
-        delete_pending_file(item.path)
         repair_request.attachments_synced_count = int(repair_request.attachments_synced_count or 0) + 1
+        uploaded.append(item)
         ok += 1
 
     recompute_attachment_fields(repair_request)
-    directory_empty = count_pending(repair_request.id) == 0
-    if directory_empty:
-        remove_pending_dir(repair_request.id)
-    return ok, failed
+    if remove_from_disk:
+        finalize_pending_deletions(uploaded, repair_request.id)
+    return PendingSyncResult(uploaded=uploaded, ok=ok, failed=failed)
 
 
 def sync_tracker_issue_and_attachments(db: Session, repair_request: RepairRequest) -> bool:
@@ -161,12 +179,15 @@ def sync_tracker_issue_and_attachments(db: Session, repair_request: RepairReques
     repair_request.tracker_ticket_url = result.ticket_url
     repair_request.last_sync_at = result.synced_at
     db.flush()
+    db.commit()
 
     if count_pending(repair_request.id) > 0:
-        sync_pending_attachments_to_tracker(repair_request)
+        sync_result = sync_pending_attachments_to_tracker(repair_request, remove_from_disk=False)
+        db.commit()
+        finalize_pending_deletions(sync_result.uploaded, repair_request.id)
     else:
         recompute_attachment_fields(repair_request)
-    db.commit()
+        db.commit()
     return True
 
 

@@ -45,17 +45,6 @@ export async function fetchRepairRequestAttachments(requestId: string): Promise<
     return res.items.map(mapAttachment);
 }
 
-export async function addRepairRequestAttachments(requestId: string, files: File[]) {
-    const form = new FormData();
-    for (const file of files) {
-        form.append('files', file);
-    }
-    return apiRequest(`/api/repair-requests/${requestId}/attachments`, {
-        method: 'POST',
-        body: form,
-    });
-}
-
 export async function runAttachmentCleanup() {
     return apiRequest<{
         orphan_dirs_removed: number;

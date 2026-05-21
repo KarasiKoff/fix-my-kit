@@ -54,6 +54,7 @@ export function RepairRequests() {
     const [total, setTotal] = useState(0);
     const [fetching, setFetching] = useState(true);
     const [bulkLoading, setBulkLoading] = useState(false);
+    const [syncingId, setSyncingId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<PageSize>(20);
     const [sortBy, setSortBy] = useState<RepairRequestSortBy>(DEFAULT_SORT);
@@ -138,6 +139,10 @@ export function RepairRequests() {
     }
 
     async function handleRowSync(id: string) {
+        if (syncingId) {
+            return;
+        }
+        setSyncingId(id);
         try {
             await syncRepairRequestTracker(id);
             showSuccess('Синхронизировано');
@@ -145,6 +150,8 @@ export function RepairRequests() {
             await load();
         } catch (err) {
             showError(formatApiError(err));
+        } finally {
+            setSyncingId(null);
         }
     }
 
@@ -316,9 +323,10 @@ export function RepairRequests() {
                                                     <button
                                                         type="button"
                                                         className="btn-ghost btn-compact"
+                                                        disabled={syncingId !== null}
                                                         onClick={() => void handleRowSync(request.id)}
                                                     >
-                                                        Синхронизировать
+                                                        {syncingId === request.id ? 'Синхронизация…' : 'Синхронизировать'}
                                                     </button>
                                                 ) : null}
                                             </td>
