@@ -23,6 +23,7 @@ import { formatApiError } from '../utils/formatApiError';
 import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
 import { fetchUserListItemById } from '../api/users';
 import { RoomMapModal } from '../components/RoomMapModal';
+import { useRepairRequestSse } from '../hooks/useRepairRequestSse';
 
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
     if (s === 'new') {
@@ -42,28 +43,47 @@ export function RepairRequestDetailPage() {
     const [closedByDbLabel, setClosedByDbLabel] = useState<string | null>(null);
     const [showMapModal, setShowMapModal] = useState(false);
 
-    const reload = useCallback(async () => {
-        if (!id) {
-            return;
-        }
-        setLoading(true);
-        try {
-            const req = await fetchRepairRequest(id);
-            setRequest(req);
-            const dev = await fetchDeviceById(req.deviceId);
-            setDevice(dev);
-        } catch (err) {
-            setRequest(null);
-            setDevice(null);
-            showError(formatApiError(err));
-        } finally {
-            setLoading(false);
-        }
-    }, [id, showError]);
+    const reload = useCallback(
+        async (opts?: { silent?: boolean }) => {
+            if (!id) {
+                return;
+            }
+            if (!opts?.silent) {
+                setLoading(true);
+            }
+            try {
+                const req = await fetchRepairRequest(id);
+                setRequest(req);
+                const dev = await fetchDeviceById(req.deviceId);
+                setDevice(dev);
+            } catch (err) {
+                if (!opts?.silent) {
+                    setRequest(null);
+                    setDevice(null);
+                    showError(formatApiError(err));
+                }
+            } finally {
+                if (!opts?.silent) {
+                    setLoading(false);
+                }
+            }
+        },
+        [id, showError],
+    );
 
     useEffect(() => {
         void reload();
     }, [reload]);
+
+    useRepairRequestSse({
+        repairRequestId: id,
+        enabled: Boolean(id),
+        onEvent: (payload) => {
+            if (payload.repair_request_id === id) {
+                void reload({ silent: true });
+            }
+        },
+    });
 
     const noteParts = useMemo(() => {
         if (!request) {

@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
@@ -22,10 +22,7 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> User:
+def _user_from_access_token(token: str, db: Session) -> User:
     try:
         payload = decode_access_token(token)
     except InvalidTokenError:
@@ -45,6 +42,28 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_token")
 
     return user
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    return _user_from_access_token(token, db)
+
+
+def get_current_user_from_query_token(
+    access_token: str = Query(..., min_length=1, description="JWT для EventSource (SSE)"),
+    db: Session = Depends(get_db),
+) -> User:
+    return _user_from_access_token(access_token.strip(), db)
+
+
+def require_admin_or_sysadmin_from_token(
+    current_user: User = Depends(get_current_user_from_query_token),
+) -> User:
+    if current_user.role not in (UserRole.ADMIN, UserRole.SYSADMIN):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+    return current_user
 
 
 def require_roles(*allowed_roles: UserRole):
@@ -69,9 +88,11 @@ get_current_admin = require_admin_only
 __all__ = [
     "get_current_admin",
     "get_current_user",
+    "get_current_user_from_query_token",
     "get_db",
     "oauth2_scheme",
     "require_admin_only",
     "require_admin_or_sysadmin",
+    "require_admin_or_sysadmin_from_token",
     "require_roles",
 ]

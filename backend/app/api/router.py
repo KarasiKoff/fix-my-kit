@@ -12,6 +12,7 @@ from backend.app.api.routes.users import router as users_router
 
 from backend.app.api.routes.room_map import router as room_map_router
 from backend.app.api.routes.webhooks import router as webhooks_router
+from backend.app.api.routes.events import router as events_router
 
 api_router = APIRouter()
 api_router.include_router(admin_stats_router)
@@ -21,6 +22,7 @@ api_router.include_router(categories_router)
 api_router.include_router(audiences_router)
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(webhooks_router)
+api_router.include_router(events_router)
 api_router.include_router(repair_requests_router)
 api_router.include_router(users_router)
 api_router.include_router(public_router)

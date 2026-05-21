@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
 import { useAppData } from '../../context/AppDataContext';
-import { createDevice } from '../../api/devices';
+import { createDevice, fetchDevices } from '../../api/devices';
 import { fetchCategories, type CategoryDto } from '../../api/categories';
 import { CategorySelectWithIcons } from '../../components/CategorySelectWithIcons';
 import { fetchAudiences, type AudienceDto } from '../../api/audiences';
@@ -10,6 +10,37 @@ import { fetchUsers, type UserListItem } from '../../api/users';
 import { Device } from '../../types/device';
 import { deviceRepairStatusLabel } from '../../utils/statusDisplay';
 import { formatApiError } from '../../utils/formatApiError';
+
+const BULK_COUNT_MIN = 1;
+const BULK_COUNT_MAX = 50;
+
+async function nextBulkDeviceIndex(roomName: string): Promise<number> {
+    const prefix = `${roomName}-`;
+    let max = 0;
+    let offset = 0;
+    const limit = 50;
+
+    while (true) {
+        const { items, total } = await fetchDevices({ room: roomName, limit, offset });
+        for (const device of items) {
+            for (const value of [device.name, device.inventoryNumber]) {
+                if (!value.startsWith(prefix)) {
+                    continue;
+                }
+                const n = Number.parseInt(value.slice(prefix.length), 10);
+                if (!Number.isNaN(n) && n > max) {
+                    max = n;
+                }
+            }
+        }
+        offset += items.length;
+        if (offset >= total || items.length === 0) {
+            break;
+        }
+    }
+
+    return max + 1;
+}
 
 export function AdminAddDevice() {
     const { showSuccess, showError } = useToast();
@@ -27,6 +58,10 @@ export function AdminAddDevice() {
     const [audienceId, setAudienceId] = useState<string>('');
     const [responsibleId, setResponsibleId] = useState('');
     const [status, setStatus] = useState<Device['status']>('not_in_repair');
+    const [bulkMode, setBulkMode] = useState(false);
+    const [bulkCount, setBulkCount] = useState(16);
+
+    const selectedAudience = audiences.find((a) => String(a.id) === audienceId);
 
     useEffect(() => {
         let cancelled = false;
@@ -56,26 +91,63 @@ export function AdminAddDevice() {
         };
     }, []);
 
+    function clampBulkCount(value: number) {
+        return Math.min(BULK_COUNT_MAX, Math.max(BULK_COUNT_MIN, value));
+    }
+
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!inventoryNumber.trim() || !name.trim()) {
-            return;
-        }
+
+        const sharedPayload = {
+            serial_number: serialNumber.trim() || null,
+            category_id: categoryId || null,
+            audience_id: audienceId ? Number(audienceId) : null,
+            responsible_id: responsibleId || null,
+            repair_status: status,
+        };
+
         try {
-            await createDevice({
-                inventory_number: inventoryNumber.trim(),
-                name: name.trim(),
-                serial_number: serialNumber.trim() || null,
-                category_id: categoryId || null,
-                audience_id: audienceId ? Number(audienceId) : null,
-                responsible_id: responsibleId || null,
-                repair_status: status,
-            });
-            showSuccess('Устройство добавлено');
-            setInventoryNumber('');
-            setName('');
-            setSerialNumber('');
-            setStatus('not_in_repair');
+            if (bulkMode) {
+                const roomName = selectedAudience?.name?.trim();
+                if (!roomName) {
+                    showError('Выберите кабинет для массового добавления');
+                    return;
+                }
+
+                const startIndex = await nextBulkDeviceIndex(roomName);
+                let created = 0;
+
+                for (let i = 0; i < bulkCount; i += 1) {
+                    const label = `${roomName}-${startIndex + i}`;
+                    await createDevice({
+                        inventory_number: label,
+                        name: label,
+                        ...sharedPayload,
+                    });
+                    created += 1;
+                }
+
+                showSuccess(
+                    created === 1
+                        ? 'Устройство добавлено'
+                        : `Добавлено устройств: ${created} (${roomName}-${startIndex} … ${roomName}-${startIndex + created - 1})`,
+                );
+            } else {
+                if (!inventoryNumber.trim() || !name.trim()) {
+                    return;
+                }
+                await createDevice({
+                    inventory_number: inventoryNumber.trim(),
+                    name: name.trim(),
+                    ...sharedPayload,
+                });
+                showSuccess('Устройство добавлено');
+                setInventoryNumber('');
+                setName('');
+                setSerialNumber('');
+                setStatus('not_in_repair');
+            }
+
             await refresh();
         } catch (err) {
             showError(formatApiError(err));
@@ -94,14 +166,27 @@ export function AdminAddDevice() {
             <section className="card card-form card--narrow-device">
                 {loadError ? <p className="error-text">{loadError}</p> : null}
                 <form className="admin-device-form" onSubmit={handleSubmit}>
-                    <label className="admin-device-field">
-                        <span className="admin-inline-label">Инвентарный номер</span>
-                        <input value={inventoryNumber} onChange={(e) => setInventoryNumber(e.target.value)} required />
-                    </label>
-                    <label className="admin-device-field">
-                        <span className="admin-inline-label">Название</span>
-                        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ноутбук Lenovo T14" required />
-                    </label>
+                    {!bulkMode ? (
+                        <>
+                            <label className="admin-device-field">
+                                <span className="admin-inline-label">Инвентарный номер</span>
+                                <input
+                                    value={inventoryNumber}
+                                    onChange={(e) => setInventoryNumber(e.target.value)}
+                                    required
+                                />
+                            </label>
+                            <label className="admin-device-field">
+                                <span className="admin-inline-label">Название</span>
+                                <input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Ноутбук Lenovo T14"
+                                    required
+                                />
+                            </label>
+                        </>
+                    ) : null}
                     <CategorySelectWithIcons
                         categories={categories}
                         value={categoryId}
@@ -114,7 +199,11 @@ export function AdminAddDevice() {
                     </label>
                     <label className="admin-device-field">
                         <span className="admin-inline-label">Кабинет</span>
-                        <select value={audienceId} onChange={(e) => setAudienceId(e.target.value)}>
+                        <select
+                            value={audienceId}
+                            onChange={(e) => setAudienceId(e.target.value)}
+                            required={bulkMode}
+                        >
                             <option value="">—</option>
                             {audiences.map((a) => (
                                 <option key={a.id} value={String(a.id)}>
@@ -123,6 +212,49 @@ export function AdminAddDevice() {
                             ))}
                         </select>
                     </label>
+
+                    <div className="admin-device-bulk-block">
+                        <label className="checkbox-field admin-device-bulk-toggle">
+                            <input
+                                type="checkbox"
+                                checked={bulkMode}
+                                onChange={(e) => setBulkMode(e.target.checked)}
+                            />
+                            <span>Несколько ПК в этом кабинете</span>
+                        </label>
+
+                        {bulkMode ? (
+                            <div className="admin-device-field admin-device-bulk-quantity">
+                                <span className="admin-inline-label">Количество</span>
+                                <input
+                                    type="range"
+                                    className="admin-bulk-range"
+                                    min={BULK_COUNT_MIN}
+                                    max={BULK_COUNT_MAX}
+                                    value={bulkCount}
+                                    onChange={(e) => setBulkCount(clampBulkCount(Number(e.target.value)))}
+                                />
+                                <div className="admin-bulk-count-row">
+                                    <input
+                                        type="number"
+                                        min={BULK_COUNT_MIN}
+                                        max={BULK_COUNT_MAX}
+                                        value={bulkCount}
+                                        onChange={(e) =>
+                                            setBulkCount(clampBulkCount(Number(e.target.value) || BULK_COUNT_MIN))
+                                        }
+                                    />
+                                    <span className="muted-text">шт.</span>
+                                </div>
+                                <p className="form-hint muted-text">
+                                    {selectedAudience
+                                        ? `Имена: ${selectedAudience.name}-1, ${selectedAudience.name}-2, …`
+                                        : 'Сначала выберите кабинет выше'}
+                                </p>
+                            </div>
+                        ) : null}
+                    </div>
+
                     <label className="admin-device-field">
                         <span className="admin-inline-label">Ответственный</span>
                         <select value={responsibleId} onChange={(e) => setResponsibleId(e.target.value)}>
@@ -142,8 +274,8 @@ export function AdminAddDevice() {
                         </select>
                     </label>
                     <div className="admin-device-actions">
-                        <button type="submit" className="btn-primary">
-                            Добавить устройство
+                        <button type="submit" className="btn-primary" disabled={bulkMode && !selectedAudience}>
+                            {bulkMode ? `Добавить ${bulkCount} устройств` : 'Добавить устройство'}
                         </button>
                     </div>
                 </form>

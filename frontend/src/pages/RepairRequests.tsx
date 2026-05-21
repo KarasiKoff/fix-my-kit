@@ -20,6 +20,7 @@ import { formatApiError } from '../utils/formatApiError';
 import { repairRequestStatusLabel, repairRequestStatusPillClass } from '../utils/statusDisplay';
 import { filtersEqual } from '../utils/filtersMatch';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
+import { useRepairRequestSse } from '../hooks/useRepairRequestSse';
 
 type RequestFilters = {
     device: string;
@@ -63,30 +64,45 @@ export function RepairRequests() {
         setPage(1);
     }, [draftFilters]);
 
-    const load = useCallback(async () => {
-        setFetching(true);
-        try {
-            const result = await fetchRepairRequests({
-                device: appliedFilters.device || undefined,
-                applicant: appliedFilters.applicant || undefined,
-                status: appliedFilters.status || undefined,
-                sort_by: sortBy,
-                sort_dir: sortDir,
-                limit: pageSize,
-                offset: (page - 1) * pageSize,
-            });
-            setItems(result.items);
-            setTotal(result.total);
-        } catch (err) {
-            showError(formatApiError(err));
-        } finally {
-            setFetching(false);
-        }
-    }, [appliedFilters, page, pageSize, sortBy, sortDir, showError]);
+    const load = useCallback(
+        async (opts?: { silent?: boolean }) => {
+            if (!opts?.silent) {
+                setFetching(true);
+            }
+            try {
+                const result = await fetchRepairRequests({
+                    device: appliedFilters.device || undefined,
+                    applicant: appliedFilters.applicant || undefined,
+                    status: appliedFilters.status || undefined,
+                    sort_by: sortBy,
+                    sort_dir: sortDir,
+                    limit: pageSize,
+                    offset: (page - 1) * pageSize,
+                });
+                setItems(result.items);
+                setTotal(result.total);
+            } catch (err) {
+                if (!opts?.silent) {
+                    showError(formatApiError(err));
+                }
+            } finally {
+                if (!opts?.silent) {
+                    setFetching(false);
+                }
+            }
+        },
+        [appliedFilters, page, pageSize, sortBy, sortDir, showError],
+    );
 
     useEffect(() => {
         void load();
     }, [load]);
+
+    useRepairRequestSse({
+        onEvent: () => {
+            void load({ silent: true });
+        },
+    });
 
     const filtersPending = !filtersEqual(draftFilters, appliedFilters);
 

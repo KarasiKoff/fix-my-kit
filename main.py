@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -5,6 +6,7 @@ from backend.app.core.config import settings
 
 from backend.app.api.router import api_router
 from backend.app.services.admin_bootstrap import ensure_admin_user
+from backend.app.services.realtime_hub import bind_main_event_loop, clear_main_event_loop
 from backend.app.services.tracker_webhook_bootstrap import ensure_tracker_webhook_actor
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,9 +14,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    bind_main_event_loop(asyncio.get_running_loop())
     ensure_admin_user()
     ensure_tracker_webhook_actor()
     yield
+    clear_main_event_loop()
 
 
 _docs = settings.server.api_docs_enabled
