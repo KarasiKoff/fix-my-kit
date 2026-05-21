@@ -14,15 +14,6 @@ type MediaEntry = {
     blobUrl: string | null;
 };
 
-function resolveApiUrl(path: string): string {
-    const raw = import.meta.env.VITE_API_BASE_URL;
-    if (raw === undefined || raw === null || String(raw).trim() === '') {
-        return path;
-    }
-    const base = String(raw).replace(/\/+$/, '');
-    return `${base}${path.startsWith('/') ? path : `/${path}`}`;
-}
-
 async function loadBlobUrl(
     requestId: string,
     item: TrackerAttachment,
@@ -35,7 +26,7 @@ async function loadBlobUrl(
     if (token) {
         headers.Authorization = `Bearer ${token}`;
     }
-    const res = await fetch(resolveApiUrl(url), { headers });
+    const res = await fetch(url, { headers });
     if (!res.ok) {
         throw new Error('load_failed');
     }

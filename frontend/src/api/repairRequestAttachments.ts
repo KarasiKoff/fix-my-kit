@@ -1,5 +1,5 @@
 import { getStoredAuthToken } from './auth';
-import { apiRequest } from './client';
+import { apiRequest, resolveApiUrl } from './client';
 import type { TrackerAttachment } from '../types/repairRequest';
 
 type TrackerAttachmentApi = {
@@ -29,13 +29,8 @@ export function repairAttachmentContentUrl(
     attachmentId: string,
     variant: 'content' | 'thumbnail' = 'content',
 ): string {
-    const raw = import.meta.env.VITE_API_BASE_URL;
-    const base =
-        raw === undefined || raw === null || String(raw).trim() === ''
-            ? ''
-            : String(raw).replace(/\/+$/, '');
     const path = `/api/repair-requests/${requestId}/attachments/${attachmentId}/content?variant=${variant}`;
-    return base === '' ? path : `${base}${path}`;
+    return resolveApiUrl(path);
 }
 
 export async function fetchRepairRequestAttachments(requestId: string): Promise<TrackerAttachment[]> {
