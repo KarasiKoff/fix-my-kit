@@ -156,7 +156,13 @@ export function AdminAddRoom() {
                                             )}
                                         </td>
                                         <td className="table-col-center table-col--narrow">
-                                            <div className="admin-row-actions">
+                                            <div
+                                                className={
+                                                    editingId === row.id
+                                                        ? 'admin-row-actions'
+                                                        : 'admin-row-actions admin-row-actions--grid'
+                                                }
+                                            >
                                                 {editingId === row.id ? (
                                                     <>
                                                         <button
@@ -181,6 +187,13 @@ export function AdminAddRoom() {
                                                     </>
                                                 ) : (
                                                     <>
+                                                        <button
+                                                            type="button"
+                                                            className="btn-ghost btn-compact admin-row-actions__full"
+                                                            disabled={!isAdmin}
+                                                        >
+                                                            Карта
+                                                        </button>
                                                         <button
                                                             type="button"
                                                             className="btn-icon-accent btn-compact btn-icon"

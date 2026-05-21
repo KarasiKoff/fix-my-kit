@@ -175,3 +175,39 @@ export function IconClose(props: IconProps) {
         </svg>
     );
 }
+
+export function IconBan(props: IconProps) {
+    return (
+        <svg {...defaults} width={18} height={18} {...props}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="m4.93 4.93 14.14 14.14" />
+        </svg>
+    );
+}
+
+export function IconPower(props: IconProps) {
+    return (
+        <svg {...defaults} width={18} height={18} {...props}>
+            <path d="M12 3v7" />
+            <path d="M17.64 7.36a7.5 7.5 0 1 1-11.28 0" />
+        </svg>
+    );
+}
+
+export function IconCircleCheck(props: IconProps) {
+    return (
+        <svg {...defaults} width={18} height={18} {...props}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="m9 12 2 2 4-4" />
+        </svg>
+    );
+}
+
+export function IconLock(props: IconProps) {
+    return (
+        <svg {...defaults} width={18} height={18} {...props}>
+              <rect x="5" y="11" width="14" height="9" rx="2" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+    );
+}

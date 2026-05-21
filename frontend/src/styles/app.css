@@ -612,6 +612,28 @@ td.table-col-start {
   grid-column: 1 / -1;
 }
 
+/* Пользователи: три иконки в один ряд */
+.admin-row-actions--users {
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+}
+
+.admin-row-actions--users .btn-compact.btn-icon {
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 8px !important;
+}
+
+.admin-table .table-col-actions--compact {
+  width: 1%;
+  min-width: 110px;
+  max-width: 130px;
+  white-space: nowrap;
+}
+
 .admin-table tbody tr.admin-table-row--editing td {
   vertical-align: middle;
   padding-block: 10px;
@@ -716,6 +738,11 @@ td.table-col-start {
   pointer-events: none;
 }
 
+.admin-toolbar-actions--compact {
+  width: auto;
+  align-items: flex-end;
+}
+
 .admin-toolbar-btn {
   width: 100%;
   min-width: 0;
@@ -725,6 +752,12 @@ td.table-col-start {
   font-weight: 500;
   line-height: 1.4;
   white-space: nowrap;
+}
+
+.admin-toolbar-actions--compact .admin-toolbar-btn.btn-icon {
+  width: auto;
+  min-width: 36px;
+  padding: 8px !important;
   box-sizing: border-box;
 }
 
@@ -734,13 +767,13 @@ td.table-col-start {
     align-items: stretch;
   }
 
-  .admin-toolbar-actions {
+  .admin-toolbar-actions:not(.admin-toolbar-actions--compact) {
     width: 100%;
     max-width: var(--admin-actions-col-width);
     margin-inline: auto;
   }
 
-  .admin-toolbar-btn {
+  .admin-toolbar-actions:not(.admin-toolbar-actions--compact) .admin-toolbar-btn {
     width: 100%;
   }
 }
@@ -808,6 +841,12 @@ td.table-col-start {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.admin-crud-sheet .admin-row-actions.admin-row-actions--grid {
+  display: grid;
+  width: min(100%, 148px);
+  margin-inline: auto;
 }
 
 .admin-table {

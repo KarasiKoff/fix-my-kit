@@ -22,6 +22,7 @@ import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 import { formatApiError } from '../utils/formatApiError';
 import { splitResolutionNoteFromApi } from '../utils/resolutionNoteTracker';
 import { fetchUserListItemById } from '../api/users';
+import { IconSync } from '../components/admin/AdminDashboardIcons';
 import { useRepairRequestSse } from '../hooks/useRepairRequestSse';
 
 function apiStatusFromUi(s: RepairRequestDetail['status']): 'open' | 'in_progress' | 'closed' {
@@ -200,8 +201,8 @@ export function RepairRequestDetailPage() {
                         <Link to="/repair" className="page-title page-title--link">
                             Заявка на ремонт
                         </Link>
-                        <button type="button" className="btn-ghost btn-compact" disabled>
-                            Обновить
+                        <button type="button" className="btn-ghost btn-compact btn-icon" disabled aria-label="Обновить" title="Обновить">
+                            <IconSync />
                         </button>
                     </div>
                 </div>
@@ -221,8 +222,14 @@ export function RepairRequestDetailPage() {
                         <Link to="/repair" className="page-title page-title--link">
                             Заявка на ремонт
                         </Link>
-                        <button type="button" className="btn-ghost btn-compact" onClick={() => void reload()}>
-                            Обновить
+                        <button
+                            type="button"
+                            className="btn-ghost btn-compact btn-icon"
+                            onClick={() => void reload()}
+                            aria-label="Обновить"
+                            title="Обновить"
+                        >
+                            <IconSync />
                         </button>
                     </div>
                 </div>
@@ -253,8 +260,14 @@ export function RepairRequestDetailPage() {
                     <Link to="/repair" className="page-title page-title--link">
                         Заявка на ремонт
                     </Link>
-                    <button type="button" className="btn-ghost btn-compact" onClick={() => void reload()}>
-                        Обновить
+                    <button
+                        type="button"
+                        className="btn-ghost btn-compact btn-icon"
+                        onClick={() => void reload()}
+                        aria-label="Обновить"
+                        title="Обновить"
+                    >
+                        <IconSync />
                     </button>
                 </div>
             </div>

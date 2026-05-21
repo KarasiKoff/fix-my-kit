@@ -8,6 +8,7 @@ import {
     updateUser,
     type UserListItem,
 } from '../../api/users';
+import { IconCheck, IconClose, IconEdit, IconLock, IconPower, IconSync } from '../../components/admin/AdminDashboardIcons';
 import { formatApiError } from '../../utils/formatApiError';
 
 export function AdminUsersPanel() {
@@ -197,17 +198,19 @@ export function AdminUsersPanel() {
                             placeholder="Логин или ФИО..."
                         />
                     </label>
-                    <div className="admin-toolbar-actions">
+                    <div className="admin-toolbar-actions admin-toolbar-actions--compact">
                         <span className="admin-inline-label admin-toolbar-label-spacer" aria-hidden="true">
                             {'\u00A0'}
                         </span>
                         <button
                             type="button"
-                            className="btn-ghost admin-toolbar-btn"
+                            className="btn-ghost admin-toolbar-btn btn-icon"
                             disabled={loading}
                             onClick={() => void load()}
+                            aria-label="Обновить список"
+                            title="Обновить список"
                         >
-                            Обновить список
+                            <IconSync />
                         </button>
                     </div>
                 </div>
@@ -239,7 +242,7 @@ export function AdminUsersPanel() {
                                 <th className="table-col-center">Роль</th>
                                 <th className="table-col-center">Статус</th>
                                 <th className="table-col-center">Создан</th>
-                                <th className="table-col-center table-col-actions">Действия</th>
+                                <th className="table-col-center table-col-actions table-col-actions--compact">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -312,38 +315,71 @@ export function AdminUsersPanel() {
                                         <td className="table-col-center table-col--nowrap">
                                             {new Date(u.createdAt).toLocaleString('ru-RU')}
                                         </td>
-                                        <td className="table-col-center table-col-actions">
-                                            <div className="admin-row-actions admin-row-actions--grid">
+                                        <td className="table-col-center table-col-actions table-col-actions--compact">
+                                            <div className="admin-row-actions admin-row-actions--users">
                                                 {editingId === u.id ? (
                                                     <>
-                                                        <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => void saveEdit()}>
-                                                            Сохранить
+                                                        <button
+                                                            type="button"
+                                                            className="btn-icon-accent btn-compact btn-icon"
+                                                            disabled={!isAdmin}
+                                                            onClick={() => void saveEdit()}
+                                                            aria-label="Сохранить"
+                                                            title="Сохранить"
+                                                        >
+                                                            <IconCheck />
                                                         </button>
-                                                        <button type="button" className="btn-ghost btn-compact" onClick={() => setEditingId(null)}>
-                                                            Отмена
+                                                        <button
+                                                            type="button"
+                                                            className="btn-danger btn-compact btn-icon"
+                                                            onClick={() => setEditingId(null)}
+                                                            aria-label="Отмена"
+                                                            title="Отмена"
+                                                        >
+                                                            <IconClose />
                                                         </button>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <button type="button" className="btn-ghost btn-compact" disabled={!isAdmin} onClick={() => startEdit(u)}>
-                                                            Изменить
+                                                        <button
+                                                            type="button"
+                                                            className="btn-icon-accent btn-compact btn-icon"
+                                                            disabled={!isAdmin}
+                                                            onClick={() => startEdit(u)}
+                                                            aria-label="Изменить"
+                                                            title="Изменить"
+                                                        >
+                                                            <IconEdit />
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            className="btn-ghost btn-compact"
+                                                            className={
+                                                                u.isActive
+                                                                    ? 'btn-danger btn-compact btn-icon'
+                                                                    : 'btn-icon-accent btn-compact btn-icon'
+                                                            }
                                                             disabled={!isAdmin || (isCurrentUser(u) && u.isActive)}
-                                                            title={isCurrentUser(u) && u.isActive ? 'Нельзя отключить свою учётную запись' : undefined}
+                                                            aria-label={u.isActive ? 'Отключить' : 'Включить'}
+                                                            title={
+                                                                isCurrentUser(u) && u.isActive
+                                                                    ? 'Нельзя отключить свою учётную запись'
+                                                                    : u.isActive
+                                                                      ? 'Отключить'
+                                                                      : 'Включить'
+                                                            }
                                                             onClick={() => void toggleActive(u)}
                                                         >
-                                                            {u.isActive ? 'Отключить' : 'Включить'}
+                                                            <IconPower />
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            className="btn-ghost btn-compact admin-row-actions__full"
+                                                            className="btn-ghost btn-compact btn-icon"
                                                             disabled={!isAdmin}
                                                             onClick={() => setResetUserId(u.id)}
+                                                            aria-label="Сброс пароля"
+                                                            title="Сброс пароля"
                                                         >
-                                                            Сброс пароля
+                                                            <IconLock />
                                                         </button>
                                                     </>
                                                 )}

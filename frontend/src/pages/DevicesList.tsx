@@ -13,6 +13,7 @@ import { Device } from '../types/device';
 import type { DeviceSortBy, DeviceSuggestField, PageSize, SortDir } from '../types/listQuery';
 import { deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 import { formatApiError } from '../utils/formatApiError';
+import { IconTrash } from '../components/admin/AdminDashboardIcons';
 import { filtersEqual } from '../utils/filtersMatch';
 
 type DeviceFilters = {
@@ -353,7 +354,9 @@ export function DevicesList() {
                                     className="table-col-center"
                                 />
                                 <th className="table-col-center">Карточка</th>
-                                <th className="table-col-center">Удалить</th>
+                                <th className="table-col-center table-col--narrow">
+                                    <span className="visually-hidden">Удалить</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -401,11 +404,13 @@ export function DevicesList() {
                                     >
                                         <button
                                             type="button"
-                                            className="btn-danger btn-compact"
+                                            className="btn-danger btn-compact btn-icon"
                                             disabled={deleting}
                                             onClick={(event) => requestDelete([device], event)}
+                                            aria-label="Удалить"
+                                            title="Удалить"
                                         >
-                                            Удалить
+                                            <IconTrash />
                                         </button>
                                     </td>
                                 </tr>

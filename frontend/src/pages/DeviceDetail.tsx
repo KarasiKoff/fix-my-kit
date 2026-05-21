@@ -8,6 +8,7 @@ import { useAppData } from '../context/AppDataContext';
 import { useToast } from '../context/ToastContext';
 import { deviceHistoryStatusLabel, deviceRepairStatusLabel, deviceRepairStatusPillClass } from '../utils/statusDisplay';
 import { formatApiError } from '../utils/formatApiError';
+import { IconSync } from '../components/admin/AdminDashboardIcons';
 import { yandexTrackerIssueWebHref } from '../utils/yandexTracker';
 
 const HISTORY_PAGE_SIZE = 8;
@@ -240,8 +241,15 @@ export function DeviceDetail() {
         <main className="page">
             <div className="page-head-row">
                 <h2>Карточка устройства</h2>
-                <button type="button" className="btn-ghost btn-compact" disabled={loading || !id} onClick={() => void reload()}>
-                    Обновить
+                <button
+                    type="button"
+                    className="btn-ghost btn-compact btn-icon"
+                    disabled={loading || !id}
+                    onClick={() => void reload()}
+                    aria-label="Обновить"
+                    title="Обновить"
+                >
+                    <IconSync />
                 </button>
             </div>
             {loading ? (
